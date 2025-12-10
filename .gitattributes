@@ -1,2 +1,29 @@
-# Auto detect text files and perform LF normalization
 * text=auto
+
+# Scripts
+*.sh text eol=lf
+*.conf text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+install-lite text eol=lf
+install-full text eol=lf
+
+# Docs
+*.md text
+*.txt text
+
+# Binaries
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.tar.gz binary
+*.zip binary
+*.7z binary
+
+# Stats
+*.md linguist-documentation
+docs/* linguist-documentation

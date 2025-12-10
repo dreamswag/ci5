@@ -1,0 +1,142 @@
+# 📡 🕵️‍♂️ Raspberry-Ci5: The Net Correctional 📊 🛰️
+> ###### **Status:** `Functional` 🌱
+------
+> [!NOTE]
+> # 🛸💨 **The Proof** 🟰 **The** 🍰
+> 
+> #### Pi 5's Cortex-A76 achieving **A+ Bufferbloat** - while near-max on ISP's 500/500Mbps line 
+>
+> ###### (Tuesday @ 3pm; test taken from PC via R7800 AP Eth2; network used by 4 people via several devices each; )
+> **![/docs/buffer.png](/docs/buffer.png)**
+> #### **[Bufferbloat Result (+ direct download for /docs/.csv)](https://www.waveform.com/tools/bufferbloat?test-id=bb0dc946-bb4e-4b63-a2e5-72f47f80040e)**
+
+
+
+
+
+------
+
+
+
+| Model | Price (£) | QoS / Bufferbloat | IDS/IPS Throughput | WAN Speed (Raw) | Docker? | Freedom? |
+| :--- | :--- | :--: | :--: | :--: | :--: | :--: |
+| **Pi5 OpenWrt (Ci5)** | **£130** | **✅ A+ (CAKE @ 940M)** | **~900 Mbps (Suricata)** | **1 Gbps (USB)** | **✅ Full** | **🔓 Open Source** |
+| GL.iNet Flint 2 | £130 | ✅ A (CAKE @ 900M) | ~500 Mbps (No Offload) | 2.5 Gbps | ⚠️ Limited | 🔓 OpenWrt Fork |
+| UniFi Gateway Ultra | £105 | ⚠️ B (Smart Queues) | 1 Gbps (Capped) | 1 Gbps | ❌ No | 🔒 Vendor Lock |
+| Ubiquiti UDM-SE | £480 | ⚠️ B (Smart Queues) | 3.5 Gbps | 10 Gbps | ❌ No | 🔒 Vendor Lock |
+| **Firewalla Gold Plus** | £580+ | ✅ A (Smart Queue) | 2.5 Gbps+ | 2.5 Gbps | ⚠️ Limited | 🔒 Proprietary |
+
+---
+
+## 💾 Phase 1: <u>Firmware Generation</u> 🃏
+
+##### We must use a custom OpenWrt image to include necessary drivers and enable full storage expansion. **CRITICAL: You must download the EXT4 image.**
+
+- ⚙️ Direct Download (Recommended)
+
+  - ###### Click the link below to download the pre-built **EXT4 Factory** image with all required packages.
+
+[**🔗 DOWNLOAD (openwrt-24.10.4-ext4-factory.img.gz)**](https://sysupgrade.openwrt.org/store/7766ba8cd22b62ab32c4c4085844ca2cabe30cf054858693a997c9cce152cef3/openwrt-24.10.4-5557c802b251-bcm27xx-bcm2712-rpi-5-ext4-factory.img.gz)
+
+------
+
+- 🛠️ Alternative: Build it Yourself (*if you don't trust link above*)
+
+  - ###### Navigate to [**https://firmware-selector.openwrt.org/**](https://firmware-selector.openwrt.org/) and select **Raspberry Pi 5/500/CM5**.
+
+
+  - ###### Press '**Customize installed packages**' and replace the contents with the block below.
+
+
+  - ###### Click '**REQUEST BUILD**' and wait for the image to generate.
+
+
+  - ###### Download the **Factory (EXT4)** image, **NOT** SquashFS.
+
+```Installed Packages
+adguardhome base-files bcm27xx-gpu-fw bcm27xx-utils bind-dig bind-libs block-mount brcmfmac-firmware-usb brcmfmac-nvram-43455-sdio btrfs-progs busybox ca-bundle ca-certificates cgi-io curl cypress-firmware-43455-sdio dbus dnsmasq dropbear e2fsprogs ethtool fdisk firewall4 fstools fwtool getrandom hostapd-common htop ip-full ip-tiny ip6tables-zz-legacy iptables-mod-conntrack-extra iptables-mod-extra iptables-mod-ipopt iptables-nft iptables-zz-legacy iw iwinfo jansson4 jq jshn jsonfilter kernel kmod-br-netfilter kmod-brcmfmac kmod-brcmutil kmod-cfg80211 kmod-crypto-acompress kmod-crypto-blake2b kmod-crypto-crc32c kmod-crypto-hash kmod-crypto-kpp kmod-crypto-lib-chacha20 kmod-crypto-lib-chacha20poly1305 kmod-crypto-lib-curve25519 kmod-crypto-lib-poly1305 kmod-crypto-sha256 kmod-crypto-xxhash kmod-fs-btrfs kmod-fs-exfat kmod-fs-ext4 kmod-fs-ntfs3 kmod-fs-vfat kmod-hid kmod-hid-generic kmod-hwmon-core kmod-hwmon-pwmfan kmod-i2c-bcm2835 kmod-i2c-brcmstb kmod-i2c-core kmod-i2c-designware-core kmod-i2c-designware-platform kmod-ifb kmod-input-core kmod-input-evdev kmod-ip6tables kmod-ipt-conntrack kmod-ipt-conntrack-extra kmod-ipt-core kmod-ipt-extra kmod-ipt-ipopt kmod-ipt-nat kmod-ipt-nat6 kmod-ipt-physdev kmod-lib-crc-ccitt kmod-lib-crc16 kmod-lib-crc32c kmod-lib-lzo kmod-lib-raid6 kmod-lib-xor kmod-lib-xxhash kmod-lib-zlib-deflate kmod-lib-zlib-inflate kmod-lib-zstd kmod-libphy kmod-mdio-devres kmod-mii kmod-mmc kmod-net-selftests kmod-nf-conncount kmod-nf-conntrack kmod-nf-conntrack6 kmod-nf-flow kmod-nf-ipt kmod-nf-ipt6 kmod-nf-log kmod-nf-log6 kmod-nf-nat kmod-nf-nat6 kmod-nf-reject kmod-nf-reject6 kmod-nfnetlink kmod-nfnetlink-queue kmod-nft-bridge kmod-nft-compat kmod-nft-core kmod-nft-fib kmod-nft-nat kmod-nft-offload kmod-nft-queue kmod-nls-base kmod-nls-cp437 kmod-nls-iso8859-1 kmod-nls-utf8 kmod-phy-ax88796b kmod-phylink kmod-ppp kmod-pppoe kmod-pppox kmod-regmap-core kmod-sched-cake kmod-sched-core kmod-scsi-core kmod-slhc kmod-spi-bcm2835 kmod-spi-dw kmod-spi-dw-mmio kmod-tcp-bbr kmod-thermal kmod-tun kmod-udptunnel4 kmod-udptunnel6 kmod-usb-core kmod-usb-hid kmod-usb-net kmod-usb-net-asix kmod-usb-net-asix-ax88179 kmod-usb-net-cdc-ether kmod-usb-net-cdc-ncm kmod-usb-net-rtl8152 kmod-usb-storage kmod-usb-storage-uas kmod-veth libatomic1 libattr libblkid1 libblobmsg-json20240329 libbpf1 libc libcap libcbor0 libcomerr0 libcurl4 libdaemon libdbus libe2p2 libelf1 libevdev libevent2-7 libexpat libext2fs2 libf2fs6 libfdisk1 libfdt libfido2-1 libgcc1 libip4tc2 libip6tc2 libiptext-nft0 libiptext0 libiptext6-0 libiwinfo-data libiwinfo20230701 libjson-c5 libjson-script20240329 liblua5.1.5 liblucihttp-lua liblucihttp-ucode liblucihttp0 liblzo2 libmbedtls21 libmnl0 libmount1 libncurses6 libnftnl11 libnghttp2-14 libnl-tiny1 libopenssl3 libparted libpcap1 libpthread libreadline8 librt libseccomp libsmartcols1 libss2 libubox20240329 libubus-lua libubus20250102 libuci20250120 libuclient20201210 libucode20230711 libudebug libudev-zero libunbound liburcu libusb-1.0-0 libustream-mbedtls20201210 libuuid1 libuv1 libwebsockets-full libxtables12 logd losetup lua luci luci-app-firewall luci-app-package-manager luci-app-sqm luci-app-unbound luci-base luci-compat luci-lib-base luci-lib-ip luci-lib-jsonc luci-lib-nixio luci-lib-uqr luci-light luci-lua-runtime luci-mod-admin-full luci-mod-network luci-mod-status luci-mod-system luci-proto-ipv6 luci-proto-ppp luci-theme-bootstrap mkf2fs mtd netifd nftables-json odhcp6c odhcpd-ipv6only openwrt-keyring opkg parted partx-utils ppp ppp-mod-pppoe procd procd-seccomp procd-ujail r8152-firmware resize2fs resolveip rpcd rpcd-mod-file rpcd-mod-iwinfo rpcd-mod-luci rpcd-mod-rrdns rpcd-mod-ucode sqm-scripts tc-tiny tcpdump terminfo ubox ubus ubusd uci uclient-fetch ucode ucode-mod-fs ucode-mod-html ucode-mod-lua ucode-mod-math ucode-mod-nl80211 ucode-mod-rtnl ucode-mod-ubus ucode-mod-uci ucode-mod-uloop uhttpd uhttpd-mod-ubus unbound-control unbound-daemon urandom-seed usbids usbutils usign wifi-scripts wireless-regdb wpad-basic-mbedtls xtables-legacy xtables-nft zlib
+```
+
+-----
+
+## 🛒 Phase 2: **<u>Hardware Essentials</u>** 👨‍🔧
+
+> 🧠 **Core (The Brain)**
+
+| Component                          | Rationale                                                    | Note                                                         |
+| :--------------------------------- | :----------------------------------------------------------- | :----------------------------------------------------------- |
+| **🤖 Raspberry Pi 5 (4GB / 8GB)**   | Cortex-A76 CPU power required for gigabit shaping (SQM) and IDS. Pi 4 will choke. | 8GB recommended for the **Full Stack**.                      |
+| **⚡ USB-C PD Power Supply (27W+)** | Required for stability. Weak power leads to reboots during packet processing. |                                                              |
+|                                    |                                                              |                                                              |
+| **💾 Storage (Pick One)**           |                                                              |                                                              |
+| MicroSD Card (32GB+ A1)            | Standard for **Lite** install.                               | Best for simplicity.                                         |
+| USB 3.0 Flash Drive / SSD          | Superior for **Full Stack**.                                 | Faster, more reliable for Docker/Suricata logs.              |
+|                                    |                                                              |                                                              |
+| 🔌 Gigabit USB 3.0 Adapter (WAN)    | Handles the raw internet connection from your modem/ONT (`eth1`), leaving the built-in port free for LAN. |                                                              |
+| 🛜 Wireless Access Point (WLAN)     | The Pi 5 onboard Wi-Fi is slow.                              | Use a dedicated AP (e.g., Netgear R7800, UniFi) for proper coverage and stability. |
+
+-----
+
+## 🐧 **Phase 2.5: <u>Optional Upgrades</u>** 🧩
+
+| Upgrade                    | Rationale                                                    | Benefit                                                      |
+| :------------------------- | :----------------------------------------------------------- | :----------------------------------------------------------- |
+| **🚀 2.5Gbps Ethernet HAT** | If your ISP is \>1Gbps. The USB bus tops out at \~940Mbps.   | Unlocks the full 2.5Gbps potential of the Pi 5's PCIe lane.  |
+| **💿 NVMe SSD HAT**         | Reliability and speed for persistent data.                   | Essential for **Full Stack** logging/Docker to prevent MicroSD card failure. |
+| **🎛️ Managed Switch**       | If you need more than one wired device (PC + IOT + AP) and need to carry VLAN tags. | Allows physical segmentation of your network.                |
+
+-----
+
+## 🛡️ Phase 3: **<u>Installation Scripts</u>** ⚔️
+
+Both variations use the same "Golden Master" config foundation.
+
+### 1\. **The Core (Lite)** 🌐🧱😶‍🌫️
+
+- ##### Installs networking, firewall, VLANs, and the native AdGuard/Unbound DNS pipeline. 
+
+    - ###### **Best for:** Pure routing, gaming, households.
+
+    - ###### **RAM Usage:** \~400MB.
+
+
+> [!IMPORTANT]
+>
+> - [ ] Run this script first - even if intending to use 'Full':
+>
+
+```bash
+sh install-lite.sh
+```
+
+------
+
+### 2\. The Stack (Full) 🚨🔍👀
+
+- ##### Adds the isolated Docker security suite (Suricata, CrowdSec, Ntopng). 
+
+    - ###### **Best for:** Zero-trust environments, monitoring, schizo-hardening, etc.
+
+    - ###### **RAM Usage:** \~1.8GB (Requires 4GB+ Pi).
+
+
+> [!IMPORTANT]
+>
+> - [ ] **Reboot** after the Lite install completes before running this:
+
+```bash
+sh install-full.sh
+```
+
+-----
+> [!TIP]
+>
+> ```
+> "Fuck all this Dream Machine dick-measuring contest. We all gon be dead in 100 years.
+> Let the kids have the unmaintained Raspberry-Ci5 auto-install scripts w/ NIDs, 0ms buffer & Docker"
+> ```
+>
+> ------
+>
+> ######  - 🌪️ **UDM Pro Funnel:**  🎪  jape.eth 🃏
+
