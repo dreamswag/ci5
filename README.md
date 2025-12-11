@@ -1,4 +1,4 @@
-# 📡 🕵️‍♂️ Raspberry-Ci5: The Net Correctional 📊 🛰️
+# 📡🕵️‍♂️ Raspberry-Ci5: The Net Correctional 📊🛰️
 
 > ###### **Status:** `Functional` 🌱 (Class A Operational)
 
@@ -8,7 +8,7 @@
 >
 > # 🛸💨 **The Proof** 🟰 **The** 🍰
 >
-> #### Pi 5 Cortex-A76 achieving **+0ms Latency** & **0.2ms Jitter** under full load.
+> ### Pi 5 Cortex-A76 achieving **+0ms Latency** & **0.2ms Jitter** under full load.
 >
 > ![buffer.png](docs/buffer.png)
 >
@@ -88,9 +88,9 @@ We use a **Hybrid Control Plane** approach.
 - **Kernel Space (Metal):** Handles the "Fast Path": **Routing, NAT, CAKE SQM, and DNS.** This ensures 0ms latency.
 - **User Space (Docker):** Handles the "Smart Path": **IDS, Threat Intel, Analytics.** Isolated to prevent router crashes.
 
-### 1. **The Core (Lite)** 🌐🧱
+## 1. **The Core (Lite)** 🌐🧱
 
-**The "Set and Forget" Router.**
+**The "Set and Forget" Router**
 
 - **Stack:** Native OpenWrt + AdGuard Home + Unbound + CAKE SQM.
 - **Performance:** Max throughput, lowest latency. Zero bloat.
@@ -98,17 +98,15 @@ We use a **Hybrid Control Plane** approach.
 
 > [!IMPORTANT]
 >
-> - [ ] Run this first! Even if you want the Full stack, this lays the foundation.
-
-Bash
+> - [ ] Run this first! Even if you want the Full stack, this lays the foundation:
 
 ```
 sh install-lite.sh
 ```
 
-### 2. The Stack (Full) 🚨🔍
+## 2. The Stack (Full) 🚨🔍
 
-**The "Fortress".**
+**The "Fortress"**
 
 - **Stack:** Adds Suricata (IDS), CrowdSec (IPS), Ntopng (Vis), Redis.
 - **Capabilities:** Deep Packet Inspection, IP ban-lists, Layer-7 Analysis.
@@ -117,8 +115,6 @@ sh install-lite.sh
 > [!IMPORTANT]
 >
 > - [ ] Reboot after Lite install, then run:
-
-Bash
 
 ```
 sh install-full.sh
@@ -130,9 +126,8 @@ sh install-full.sh
 >
 > ```
 > "Fuck all this Dream Machine dick-measuring contest. We all gon be dead in 100 years.
-> Let the kids have the unmaintained Raspberry-Ci5 auto-install scripts w/ NIDs, 0ms buffer & Docker"
+> Let the kids have the unmaintained Raspberry-Ci5 auto-install scripts w/ Docker, NIDs & 0ms lag"
 > ```
 >
 > ------
->
-> ###### - 🌪️ **UDM Pro Funnel:** 🎪  jape.eth 🃏
+> ###### > 🌪️ **UDM Pro Funnel:** 🎪  jape.eth 🃏
