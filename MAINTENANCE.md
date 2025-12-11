@@ -30,13 +30,14 @@ If you have a Pi 4, a weird Realtek dongle, a different Access Point, or a 10Gbp
 
 ### **Awesome. Please Fork it.**
 
+------
+
 I encourage you to take this code and make it your own:
 
 - Build a better version.
-
 - Release a "Universal Edition." 
 
-- ### **The code is free (MIT/GPL), but my time is not.**
+**The code is free (MIT/GPL), but my time is not.**
 
 ------
 
