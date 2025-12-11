@@ -8,7 +8,7 @@
 >
 > # 🛸💨 **The Proof** 🟰 **The** 🍰
 >
-> #### Pi 5 Cortex-A76 achieving **+0ms Latency** & **0.2ms Jitter** under full load.
+> ### Pi 5 Cortex-A76 achieving **+0ms Latency** & **0.2ms Jitter** under full load.
 >
 > ![buffer.png](docs/buffer.png)
 >
