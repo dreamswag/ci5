@@ -19,7 +19,7 @@
 > ### **[Bufferbloat Result (+ direct download for /docs/.csv)](https://www.waveform.com/tools/bufferbloat?test-id=bb0dc946-bb4e-4b63-a2e5-72f47f80040e)**
 ------
 
-### 📉 **The "Why" (Market Correction)** 📈
+## 📉 **The "Why" (Market Correction)** 📈
 
 Most routers are **Tier 1 Garbage** (ISP/Consumer) or **Tier 3 Overkill** ($600+ Enterprise/Vendor-Locked).
 
