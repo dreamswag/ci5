@@ -88,9 +88,9 @@ We use a **Hybrid Control Plane** approach.
 - **Kernel Space (Metal):** Handles the "Fast Path": **Routing, NAT, CAKE SQM, and DNS.** This ensures 0ms latency.
 - **User Space (Docker):** Handles the "Smart Path": **IDS, Threat Intel, Analytics.** Isolated to prevent router crashes.
 
-### 1. **The Core (Lite)** 🌐🧱
+## 1. **The Core (Lite)** 🌐🧱
 
-**The "Set and Forget" Router.**
+**The "Set and Forget" Router**
 
 - **Stack:** Native OpenWrt + AdGuard Home + Unbound + CAKE SQM.
 - **Performance:** Max throughput, lowest latency. Zero bloat.
@@ -104,9 +104,9 @@ We use a **Hybrid Control Plane** approach.
 sh install-lite.sh
 ```
 
-### 2. The Stack (Full) 🚨🔍
+## 2. The Stack (Full) 🚨🔍
 
-**The "Fortress".**
+**The "Fortress"**
 
 - **Stack:** Adds Suricata (IDS), CrowdSec (IPS), Ntopng (Vis), Redis.
 - **Capabilities:** Deep Packet Inspection, IP ban-lists, Layer-7 Analysis.
