@@ -1,4 +1,4 @@
-# 📡 🕵️‍♂️ Raspberry-Ci5: The Net Correctional 📊 🛰️
+# 📡🕵️‍♂️ Raspberry-Ci5: The Net Correctional 📊🛰️
 
 > ###### **Status:** `Functional` 🌱 (Class A Operational)
 
