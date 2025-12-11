@@ -98,7 +98,7 @@ We use a **Hybrid Control Plane** approach.
 
 > [!IMPORTANT]
 >
-> - [ ] Run this first! Even if you want the Full stack, this lays the foundation:
+> - [ ] **Run this first! Even if you want the Full stack, this lays the foundation**:
 
 ```
 sh install-lite.sh
@@ -114,7 +114,7 @@ sh install-lite.sh
 
 > [!IMPORTANT]
 >
-> - [ ] Reboot after Lite install, then run:
+> - [ ] **Reboot after Lite install, then run**:
 
 ```
 sh install-full.sh
