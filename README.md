@@ -130,5 +130,4 @@ sh install-full.sh
 > ```
 >
 > ------
->
-> ###### - 🌪️ **UDM Pro Funnel:** 🎪  jape.eth 🃏
+> ###### > 🌪️ **UDM Pro Funnel:** 🎪 jape.eth 🃏
