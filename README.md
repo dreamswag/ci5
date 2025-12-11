@@ -126,7 +126,7 @@ sh install-full.sh
 >
 > ```
 > "Fuck all this Dream Machine dick-measuring contest. We all gon be dead in 100 years.
-> Let the kids have the unmaintained Raspberry-Ci5 auto-install scripts w/ Docker, NIDs & 0.2s jitter"
+> Let the kids have the unmaintained Raspberry-Ci5 auto-install scripts w/ Docker, NIDs & 0ms buffer"
 > ```
 >
 > ------
