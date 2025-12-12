@@ -81,14 +81,23 @@ adguardhome base-files bcm27xx-gpu-fw bcm27xx-utils bind-dig bind-libs block-mou
 
 ------
 
-## 🛡️ Phase 3: **<u>The Architecture</u>** ⚔️
+## 🛡️ Phase 3: The Architecture – Hybrid Control Plane ⚔️
 
-We use a **Hybrid Control Plane** approach.
+**Why Your Internet Never Dies**
 
-- **Kernel Space (Metal):** Handles the "Fast Path": **Routing, NAT, CAKE SQM, and DNS.** This ensures 0ms latency.
-- **User Space (Docker):** Handles the "Smart Path": **IDS, Threat Intel, Analytics.** Isolated to prevent router crashes.
+| Path          | Runs Where       | Job                                      | If It Crashes → Internet Impact |
+|---------------|------------------|------------------------------------------|--------------------------------|
+| **Fast Path** | Bare metal kernel| Routing · NAT · CAKE SQM · BBR · Unbound | **Still 100% up** – 0 ms latency maintained |
+| **Smart Path**| Isolated Docker  | Suricata IDS · CrowdSec · Ntopng · Redis · AdGuard | **Still 100% up** – temporarily packet blind |
 
-## 1. **The Core (Lite)** 🌐🧱
+Even if Docker explodes, Suricata shits itself, and/or you fat-finger a container update: 
+* the packets keep flowing with perfect CAKE shaping.
+* Zoom call / CS2 Premier match don't care that the IDS just segfaulted.
+
+Meanwhile Docker-on-Router setup typically means: 
+* the entire network goes loses connectivity as soon as Docker sneezes.
+
+## 🌐 1. **The Core (Lite)** 🧱
 
 **The "Set and Forget" Router**
 
@@ -104,7 +113,7 @@ We use a **Hybrid Control Plane** approach.
 sh install-lite.sh
 ```
 
-## 2. The Stack (Full) 🚨🔍
+## 🚨 2. The Stack (Full) 🔍
 
 **The "Fortress"**
 
