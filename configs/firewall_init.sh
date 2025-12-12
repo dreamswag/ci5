@@ -1,8 +1,5 @@
 #!/bin/sh
-# Ci5 Firewall Logic (Hardened)
-# - Trusted: LAN + VLAN 10 + VLAN 20
-# - Restricted: IoT (VLAN 30), Guest (VLAN 40)
-# - Isolated: Docker (Zero Trust)
+# Ci5 Firewall Logic (Hardened & Fixed)
 
 echo "🔥 Configuring Firewall Zones & Rules..."
 
@@ -57,9 +54,9 @@ uci add_list firewall.@zone[-1].network='vlan40'
 # Docker (Isolated Container Network)
 uci add firewall zone
 uci set firewall.@zone[-1].name='docker'
-uci set firewall.@zone[-1].input='REJECT'   # Block access to Router Config
-uci set firewall.@zone[-1].output='ACCEPT'  # Allow containers to talk to world
-uci set firewall.@zone[-1].forward='REJECT' # Block access to LAN
+uci set firewall.@zone[-1].input='REJECT'
+uci set firewall.@zone[-1].output='ACCEPT'
+uci set firewall.@zone[-1].forward='REJECT'
 uci add_list firewall.@zone[-1].network='docker'
 
 # 3. Forwarding (Who can access the Internet?)
@@ -69,7 +66,7 @@ for zone in lan iot guest docker; do
     uci set firewall.@forwarding[-1].dest='wan'
 done
 
-# Allow LAN to access Docker (For dashboards)
+# Allow LAN to access Docker
 uci add firewall forwarding
 uci set firewall.@forwarding[-1].src='lan'
 uci set firewall.@forwarding[-1].dest='docker'
@@ -93,7 +90,17 @@ for zone in iot guest; do
     uci set firewall.@rule[-1].target='ACCEPT'
 done
 
-# Block External DNS (Force AdGuard/Unbound usage)
+# Allow Docker to reach AdGuard/Unbound
+uci add firewall rule
+uci set firewall.@rule[-1].name='Allow-Docker-DNS'
+uci set firewall.@rule[-1].src='docker'
+uci set firewall.@rule[-1].dest='lan'
+uci set firewall.@rule[-1].dest_ip='192.168.99.1'
+uci set firewall.@rule[-1].proto='tcp udp'
+uci set firewall.@rule[-1].dest_port='53 5335'
+uci set firewall.@rule[-1].target='ACCEPT'
+
+# Block External DNS
 for zone in lan iot guest; do
     uci add firewall rule
     uci set firewall.@rule[-1].name="Block-DoH-$zone"
@@ -104,7 +111,7 @@ for zone in lan iot guest; do
     uci set firewall.@rule[-1].target='REJECT'
 done
 
-# Block WAN Management (Security Hardening)
+# Block WAN Management
 uci add firewall rule
 uci set firewall.@rule[-1].name='Block-WAN-Mgmt'
 uci set firewall.@rule[-1].src='wan'
@@ -112,8 +119,7 @@ uci set firewall.@rule[-1].proto='tcp'
 uci set firewall.@rule[-1].dest_port='22 80 443 3000 3001'
 uci set firewall.@rule[-1].target='REJECT'
 
-# Explicitly Block Docker from touching LAN/IoT/Guest
-# (Redundant safety net for the 'forward=REJECT' policy)
+# Explicitly Block Docker from touching IoT/Guest
 for dest in lan iot guest; do
     uci add firewall rule
     uci set firewall.@rule[-1].name="Block-Docker-to-$dest"
@@ -122,14 +128,5 @@ for dest in lan iot guest; do
     uci set firewall.@rule[-1].target='REJECT'
 done
 
-# Allow Docker to reach Unbound (Native DNS)
-uci add firewall rule
-uci set firewall.@rule[-1].name='Allow-Docker-Unbound'
-uci set firewall.@rule[-1].src='docker'
-uci set firewall.@rule[-1].proto='tcp udp'
-uci set firewall.@rule[-1].dest_port='5335'
-uci set firewall.@rule[-1].target='ACCEPT'
-
 uci commit firewall
 /etc/init.d/firewall restart
-echo "✅ Firewall configuration applied."

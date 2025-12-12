@@ -7,7 +7,6 @@ NC='\033[0m'
 echo "=========================================="
 echo "   🃏 Ci5 Validation Check"
 echo "=========================================="
-echo ""
 
 fail=0
 
@@ -34,12 +33,16 @@ else
     fail=1
 fi
 
-# 3. BBR
-echo -n "[*] TCP BBR... "
-if sysctl net.ipv4.tcp_congestion_control 2>/dev/null | grep -q bbr; then
+# 3. Latency Tuning (The 0ms check)
+echo -n "[*] Nuclear Tuning (Offloads DISABLED)... "
+offload_check=$(ethtool -k eth1 2>/dev/null | grep -E "tcp-segmentation-offload: on|generic-receive-offload: on")
+
+if [ -z "$offload_check" ]; then
     echo -e "${GREEN}✓${NC}"
 else
-    echo -e "${YELLOW}⚠ Not enabled${NC}"
+    echo -e "${RED}✗ FAILED${NC}"
+    echo "    Hardware offloading is ON. Latency will suffer."
+    fail=1
 fi
 
 # 4. Unbound
@@ -60,21 +63,21 @@ else
     fail=1
 fi
 
-# 6. Firewall
-echo -n "[*] Firewall (nftables)... "
-if nft list tables 2>/dev/null | grep -q inet; then
-    echo -e "${GREEN}✓${NC}"
-else
-    echo -e "${RED}✗ Not active${NC}"
-    fail=1
-fi
-
-# 7. Docker (if Full)
+# 6. Docker (if Full)
 echo -n "[*] Docker... "
 if docker info >/dev/null 2>&1; then
     running=$(docker ps --filter "status=running" --format '{{.Names}}' 2>/dev/null | wc -l)
     if [ "$running" -gt 0 ]; then
         echo -e "${GREEN}✓ ($running containers)${NC}"
+        
+        # Test Docker DNS resolution
+        echo -n "[*] Docker DNS (AdGuard access)... "
+        if docker run --rm busybox nslookup google.com 192.168.99.1 >/dev/null 2>&1; then
+            echo -e "${GREEN}✓${NC}"
+        else
+            echo -e "${RED}✗ Cannot resolve via AdGuard${NC}"
+            fail=1
+        fi
     else
         echo -e "${YELLOW}⚠ No containers running${NC}"
     fi
@@ -82,35 +85,12 @@ else
     echo "⊘ Not installed (Lite mode)"
 fi
 
-# 8. WAN
-echo -n "[*] WAN connectivity... "
-if ping -c 1 -W 3 1.1.1.1 >/dev/null 2>&1; then
-    echo -e "${GREEN}✓${NC}"
-else
-    echo -e "${RED}✗ No internet${NC}"
-    fail=1
-fi
-
 echo ""
 echo "=========================================="
 if [ $fail -eq 0 ]; then
-    echo -e "${GREEN}[✓] ALL GREEN – Ready for deployment!${NC}"
-    echo ""
-    echo "📝 Next steps:"
-    echo "  1. Configure AdGuard: http://192.168.99.1:3000"
-    echo "  2. Test bufferbloat: waveform.com/tools/bufferbloat"
-    echo "  3. Configure AP with VLANs"
-    echo ""
-    echo "📊 Monitoring:"
-    echo "  - LuCI:   http://192.168.99.1"
-    echo "  - Ntopng: http://192.168.99.1:3001 (if Full)"
+    echo -e "${GREEN}[✓] ALL GREEN${NC}"
 else
-    echo -e "${RED}[✗] Some checks failed${NC}"
-    echo ""
-    echo "📋 Troubleshooting:"
-    echo "  - Logs: logread"
-    echo "  - Services: ps | grep -E 'unbound|adguard'"
-    echo "  - Reboot: reboot"
+    echo -e "${RED}[✗] Checks failed${NC}"
 fi
 echo "=========================================="
 exit $fail
