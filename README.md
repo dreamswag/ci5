@@ -101,7 +101,7 @@ Meanwhile Docker-on-Router setup typically means:
 
 **The "Set and Forget" Router**
 
-- **Stack:** Native OpenWrt + AdGuard Home + Unbound + CAKE SQM.
+- **Stack:** Native OpenWrt + Unbound + CAKE SQM.
 - **Performance:** Max throughput, lowest latency. Zero bloat.
 - **Target:** Gaming, households, people who just want the internet to work perfectly.
 
@@ -117,7 +117,7 @@ sh install-lite.sh
 
 **The "Fortress"**
 
-- **Stack:** Adds Suricata (IDS), CrowdSec (IPS), Ntopng (Vis), Redis.
+- **Stack:** Adds Suricata (IDS), CrowdSec (IPS), AdGuard Home (AdBlock), Ntopng (Vis), Redis.
 - **Capabilities:** Deep Packet Inspection, IP ban-lists, Layer-7 Analysis.
 - **Cost:** Uses ~1.8GB RAM. Requires 4GB+ Pi.
 
