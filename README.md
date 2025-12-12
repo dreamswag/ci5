@@ -97,7 +97,7 @@ Even if Docker explodes, Suricata shits itself, and/or you fat-finger a containe
 Meanwhile Docker-on-Router setup typically means: 
 * the entire network goes loses connectivity as soon as Docker sneezes.
 
-## 🌐 1. **The Core (Lite)** 🧱
+## 1. **The Core (Lite)** 🌐🧱
 
 **The "Set and Forget" Router**
 
@@ -113,7 +113,7 @@ Meanwhile Docker-on-Router setup typically means:
 sh install-lite.sh
 ```
 
-## 🚨 2. The Stack (Full) 🔍
+## 2. The Stack (Full) 🚨🔍
 
 **The "Fortress"**
 
