@@ -94,8 +94,8 @@ Even if Docker explodes, Suricata shits itself, and/or you fat-finger a containe
 * the packets keep flowing with perfect CAKE shaping.
 * Zoom call / CS2 Premier match don't care that the IDS just segfaulted.
 
-Meanwhile Docker-on-Router setup typically means: 
-* the entire network goes loses connectivity as soon as Docker sneezes.
+Meanwhile - "Docker-on-Router" setup usually means: 
+* the entire network loses connectivity as soon as Docker sneezes.
 
 ## 1. **The Core (Lite)** 🌐🧱
 
