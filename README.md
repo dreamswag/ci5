@@ -1,5 +1,3 @@
-
-
 # 📡🕵️‍♂️ Raspberry-Ci5: The Net Correctional 📊🛰️
 
 > ###### **Status:** `Functional` 🌱 (Class A Operational)
@@ -116,17 +114,12 @@ Meanwhile - "Docker-on-Router" setup usually means:
 > - [ ] **Run this first! Even if you want the Full stack, this lays the foundation**:
 =======
 Bash
->>>>>>> Stashed changes
-
 ```
 sh install-lite.sh
 ```
 
 ### 4. Tune Performance (Speed Wizard) 🏎️
 
-Mandatory for 0ms Latency.
-
-<<<<<<< Updated upstream
 - **Stack:** Adds Suricata (IDS), CrowdSec (IPS), AdGuard Home (AdBlock), Ntopng (Vis), Redis.
 - **Capabilities:** Deep Packet Inspection, IP ban-lists, Layer-7 Analysis.
 - **Cost:** Uses ~1.8GB RAM. Requires 4GB+ Pi.
@@ -150,7 +143,6 @@ sh extras/speed_wizard.sh
 Requires 8GB Pi 5.
 
 Bash
->>>>>>> Stashed changes
 
 ```
 sh install-full.sh
