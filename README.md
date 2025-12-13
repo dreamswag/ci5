@@ -229,9 +229,9 @@ You have two ways to access the Pi 5 to start the installation. Choose one:
 
 ------
 
-## 3\. Deploy The Core (Lite) 🛜🌐
+## 3\. Deploy The Core (Lite) 🌐📶
 
-**The "Set and Forget" Router** 🌐
+**The "Set and Forget" Router** 🛜
 
   - **Actions:** Resizes storage, Tunes Kernel (0ms), Configures Unbound, **Auto-Tunes SQM**.
   - **Performance:** Max throughput, lowest latency. Zero bloat.
