@@ -116,7 +116,7 @@ We utilize a custom "Golden Master" OpenWrt image. This pre-bakes the kernel dri
 **CRITICAL: Use the EXT4 image. SquashFS is read-only and will brick this workflow.**
 
 - ⚙️ **Direct Download (Recommended)**
-  - **[🔗 DOWNLOAD (openwrt-24.10.4-ext4-factory.img.gz)](https://sysupgrade.openwrt.org/store/7766ba8cd22b62ab32c4c4085844ca2cabe30cf054858693a997c9cce152cef3/openwrt-24.10.4-5557c802b251-bcm27xx-bcm2712-rpi-5-ext4-factory.img.gz)**
+  - **[🔗 DOWNLOAD (openwrt-24.10.4-ext4-factory.img.gz)](https://sysupgrade.openwrt.org/store/807e824a47843a246639ddd2c7ab4ab434ab7a21dc35c9ed40d8d6e778091f7c/openwrt-24.10.4-54a3724f6671-bcm27xx-bcm2712-rpi-5-ext4-factory.img.gz)**
 
 - 🛠️ **Alternative: Build it Yourself** (*Trust Issues Edition*)
   - Go to **[firmware-selector.openwrt.org](https://firmware-selector.openwrt.org/)** -> **Raspberry Pi 5**.
