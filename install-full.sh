@@ -5,7 +5,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 echo "=========================================="
-echo "   🃏 Ci5 Full Installer"
+echo "   🃏 Ci5 Full Installer (Fortress Mode)"
 echo "=========================================="
 echo ""
 
@@ -18,10 +18,10 @@ if [ "$TOTAL_RAM" -lt 3500000 ]; then
     [ "$ram_confirm" != "y" ] && exit 0
 fi
 
-# Install Docker
-echo "[*] Installing Docker..."
+# Install Docker & Security Dependencies
+echo "[*] Installing Docker & Security packages..."
 opkg update
-opkg install dockerd docker-compose
+opkg install dockerd docker-compose crowdsec-firewall-bouncer
 
 # Configure Docker (Zero Trust - Point to Router DNS)
 echo "[*] Configuring Docker isolation..."
@@ -42,7 +42,7 @@ JSON
 /etc/init.d/dockerd enable
 /etc/init.d/dockerd start
 
-# Create Network Interface for Firewall Control
+# Create Network Interface for Firewall Control (docker0)
 uci set network.docker=interface
 uci set network.docker.proto='none'
 uci set network.docker.device='docker0'
@@ -58,7 +58,7 @@ cd /opt/ci5-docker
 # Initialize Suricata Rules
 echo "[*] Fetching Suricata Rules..."
 mkdir -p suricata/rules
-docker run --rm -v $(pwd)/suricata:/var/lib/suricata jasonish/suricata:7.0.3 suricata-update
+docker run --rm -v $(pwd)/suricata:/var/lib/suricata jasonish/suricata:latest suricata-update
 
 echo "[*] Starting containers..."
 docker-compose up -d
@@ -67,3 +67,13 @@ echo ""
 echo "=========================================="
 echo -e "${GREEN}[✓] Full Stack deployed!${NC}"
 echo "=========================================="
+echo ""
+echo -e "${YELLOW}[!] ACTION REQUIRED: Connect CrowdSec Bouncer${NC}"
+echo "    The Firewall Bouncer is installed but needs an API key from the Docker container."
+echo "    Run these commands manually:"
+echo ""
+echo "    1. docker exec crowdsec cscli bouncers add openwrt-firewall"
+echo "    2. uci set crowdsec.@bouncer[0].api_key='<KEY_FROM_ABOVE>'"
+echo "    3. uci set crowdsec.@bouncer[0].api_url='http://127.0.0.1:8081'"
+echo "    4. uci commit crowdsec && /etc/init.d/crowdsec-firewall-bouncer restart"
+echo ""

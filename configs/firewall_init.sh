@@ -7,14 +7,14 @@ echo "🔥 Configuring Firewall Zones & Rules..."
 uci -q delete firewall.docker
 uci -q delete firewall.iot
 uci -q delete firewall.guest
+uci -q delete firewall.tailscale
 uci set firewall.@defaults[0].input='REJECT'
 uci set firewall.@defaults[0].output='ACCEPT'
 uci set firewall.@defaults[0].forward='REJECT'
 uci set firewall.@defaults[0].synflood_protect='1'
 
 # 2. Zone Definitions
-
-# WAN (Internet)
+# WAN
 uci set firewall.@zone[1].name='wan'
 uci set firewall.@zone[1].input='REJECT'
 uci set firewall.@zone[1].output='ACCEPT'
@@ -25,7 +25,7 @@ uci -q del firewall.@zone[1].network
 uci add_list firewall.@zone[1].network='wan'
 uci add_list firewall.@zone[1].network='wan6'
 
-# LAN (Trusted: Mgmt + PC + Mobile)
+# LAN
 uci set firewall.@zone[0].name='lan'
 uci set firewall.@zone[0].input='ACCEPT'
 uci set firewall.@zone[0].output='ACCEPT'
@@ -35,7 +35,7 @@ uci add_list firewall.@zone[0].network='lan'
 uci add_list firewall.@zone[0].network='vlan10'
 uci add_list firewall.@zone[0].network='vlan20'
 
-# IoT (Restricted: Hue/Smart Devices)
+# IoT
 uci add firewall zone
 uci set firewall.@zone[-1].name='iot'
 uci set firewall.@zone[-1].input='REJECT'
@@ -43,7 +43,7 @@ uci set firewall.@zone[-1].output='ACCEPT'
 uci set firewall.@zone[-1].forward='REJECT'
 uci add_list firewall.@zone[-1].network='vlan30'
 
-# Guest (Restricted: Flatmate)
+# Guest
 uci add firewall zone
 uci set firewall.@zone[-1].name='guest'
 uci set firewall.@zone[-1].input='REJECT'
@@ -51,7 +51,7 @@ uci set firewall.@zone[-1].output='ACCEPT'
 uci set firewall.@zone[-1].forward='REJECT'
 uci add_list firewall.@zone[-1].network='vlan40'
 
-# Docker (Isolated Container Network)
+# Docker
 uci add firewall zone
 uci set firewall.@zone[-1].name='docker'
 uci set firewall.@zone[-1].input='REJECT'
@@ -59,21 +59,17 @@ uci set firewall.@zone[-1].output='ACCEPT'
 uci set firewall.@zone[-1].forward='REJECT'
 uci add_list firewall.@zone[-1].network='docker'
 
-# 3. Forwarding (Who can access the Internet?)
+# 3. Forwarding
 for zone in lan iot guest docker; do
     uci add firewall forwarding
     uci set firewall.@forwarding[-1].src="$zone"
     uci set firewall.@forwarding[-1].dest='wan'
 done
-
-# Allow LAN to access Docker
 uci add firewall forwarding
 uci set firewall.@forwarding[-1].src='lan'
 uci set firewall.@forwarding[-1].dest='docker'
 
 # 4. Critical Rules
-
-# Allow DHCP & DNS for Restricted Zones
 for zone in iot guest; do
     uci add firewall rule
     uci set firewall.@rule[-1].name="Allow-DHCP-$zone"
@@ -103,23 +99,33 @@ uci set firewall.@rule[-1].target='ACCEPT'
 # Block External DNS
 for zone in lan iot guest; do
     uci add firewall rule
-    uci set firewall.@rule[-1].name="Block-DoH-$zone"
+    uci set firewall.@rule[-1].name="Block-External-DNS-$zone"
     uci set firewall.@rule[-1].src="$zone"
     uci set firewall.@rule[-1].dest='wan'
     uci set firewall.@rule[-1].proto='tcp udp'
-    uci set firewall.@rule[-1].dest_port='853'
+    uci set firewall.@rule[-1].dest_port='53'
     uci set firewall.@rule[-1].target='REJECT'
 done
+
+# Block Google/Cloudflare DoH (Port 443/853)
+uci add firewall rule
+uci set firewall.@rule[-1].name='Block-Google-DoH'
+uci set firewall.@rule[-1].src='lan'
+uci set firewall.@rule[-1].dest='wan'
+uci set firewall.@rule[-1].dest_ip='8.8.8.8 8.8.4.4 1.1.1.1 1.0.0.1'
+uci set firewall.@rule[-1].proto='tcp udp'
+uci set firewall.@rule[-1].dest_port='443 853'
+uci set firewall.@rule[-1].target='REJECT'
 
 # Block WAN Management
 uci add firewall rule
 uci set firewall.@rule[-1].name='Block-WAN-Mgmt'
 uci set firewall.@rule[-1].src='wan'
 uci set firewall.@rule[-1].proto='tcp'
-uci set firewall.@rule[-1].dest_port='22 80 443 3000 3001'
+uci set firewall.@rule[-1].dest_port='22 2222 80 443 3000 3001'
 uci set firewall.@rule[-1].target='REJECT'
 
-# Explicitly Block Docker from touching IoT/Guest
+# Block Docker to LAN
 for dest in lan iot guest; do
     uci add firewall rule
     uci set firewall.@rule[-1].name="Block-Docker-to-$dest"

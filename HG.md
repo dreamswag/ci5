@@ -1,6 +1,6 @@
 ## ⚡ The "Holy CiG 🤯" Gauntlet; Unclaimed Bounty ⚡
 
-**Due to ISP circumstances**: the personal testing & optimisation configuring process for this setup has been hard-capped to 500/500 throughput constraints - despite owning a Pironman5-mini primed for 2.5Gb HAT.
+**Due to ISP circumstances**: personal testing & optimisation configuring process for this setup has been hard-capped to 500/500 throughput constraints - despite owning a Pironman5-mini primed for 2.5Gb HAT.
 
 **Mathematically speaking**: CPU usage with USB NIC indicates that this stack should **hypothetically** be able to eat 2-2.3 Gbps for breakfast - while still handing out A+ Bufferbloat grades w/ full Suricata IDS. 
 
@@ -63,7 +63,7 @@
 >
 >    **Security Stack:** **Suricata (IDS)** and **CrowdSec **must be **running and processing traffic** 
 >
->    - **Log** snippet required.
+>    - **Log** snippet required
 >
 > 6. ------
 >
