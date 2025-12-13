@@ -29,10 +29,10 @@ Ci5 proves that commodity ARM hardware + open-source software can mechanically o
 | **Model** | **Price (£)** | **Latency / Jitter** | **IDS Throughput** |       **Architecture** |  **Freedom?** |
 | --------------------- | :------------ | :------------------: | :----------------: | :--------------------------: | :------------: |
 | **Pi5 OpenWrt (Ci5)** | **£130** |  **✅ +0ms / 0.2ms** |   **~920 Mbps** | **Hybrid (Kernel + Docker)** | **🔓 Absolute** |
+| UniFi Gateway Ultra   | £105          |   ⚠️ +10ms (SmartQ)   |       1 Gbps       |          Monolithic          | 🔒 Vendor Lock  |
+| GL.iNet Flint 2       | £130          |     ✅ +2ms / 3ms     |     ~500 Mbps      |         OpenWrt Fork         | 🔓 Open Source  |
 | Ubiquiti UDM-SE       | £480          |     ⚠️ +3ms / 2ms     |      3.5 Gbps      |          Monolithic          | 🔒 Vendor Lock  |
 | Firewalla Gold+       | £580+         |     ✅ +1ms / 1ms     |      2.5 Gbps      |      Proprietary Linux       | 🔒 Proprietary  |
-| GL.iNet Flint 2       | £130          |     ✅ +2ms / 3ms     |     ~500 Mbps      |         OpenWrt Fork         | 🔓 Open Source  |
-| UniFi Gateway Ultra   | £105          |   ⚠️ +10ms (SmartQ)   |       1 Gbps       |          Monolithic          | 🔒 Vendor Lock  |
 
 ------
 
