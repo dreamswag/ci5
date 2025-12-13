@@ -114,19 +114,70 @@ base-files bcm27xx-gpu-fw bcm27xx-utils bind-dig bind-libs block-mount brcmfmac-
 </details>
 
 ### 1.5. Flashing The Media (Windows 11) 💿
-**Recommended Tool:** [BalenaEtcher](https://etcher.balena.io/) or [Rufus](https://rufus.ie/)
+**Recommended Tool:** [BalenaEtcher](https://etcher.balena.io/) or [Rufus](https://rufus.ie/).
 
 1. **Insert Media:** Plug your **High-Endurance MicroSD** or **USB 3.0 Drive** into your PC.
-2. **Select Image:** Open Etcher/Rufus and select the `.img.gz` file you just downloaded.
-   - *Note: You do not need to unzip the file first.*
+2. **Select Image:** Open Etcher/Rufus and select the `.img.gz` file you downloaded.
 3. **Flash:** Click **Flash!** and wait for validation to complete.
-4. **Boot:** Insert the media into your Pi 5 and power it on.
-   - *First boot takes ~2 minutes to expand the filesystem.*
+4. **⚠️ PRE-LOAD THE SCRIPTS (Optional but Recommended):**
+   * *If you plan to use a **Keyboard + Monitor**, do this now:*
+   1. Unplug and Re-plug the USB drive into your PC.
+   2. Windows will detect a small partition named `boot`. Open it.
+   3. Drag your **`ci5` folder** (containing these scripts) directly onto this `boot` drive.
+   4. Eject safely.
 
-### 2\. The Wizard (Infrastructure Identity) 🧙‍♂️
+---
 
-Once the Pi 5 boots, SSH in (`root` / no password).
-Run this **ONCE** to define your ISP, Passwords, and Network Identity.
+### 2. Initial Access & File Transfer 🧙‍♂️
+
+You have two ways to access the Pi 5 to start the installation. Choose one:
+
+#### 🧑‍💻 **Option A: The "Headless" Pro (Ethernet + SSH)** 
+*Best for users who want to copy-paste commands from their PC.*
+
+1. **Wiring:**
+   * **WAN:** Connect your Modem/ONT to the Pi 5 **USB Adapter** (`eth1`).
+   * **LAN:** Connect your PC directly to the Pi 5 **Onboard Ethernet** (`eth0`).
+2. **Connect:**
+   * Ensure your PC network adapter is set to **Automatic (DHCP)**.
+   * Open PowerShell / Terminal on your PC.
+3. **Transfer & Login:**
+   * **Send the Scripts:** (Run from your PC's `ci5` folder location)
+     ```powershell
+     scp -r ci5 root@192.168.1.1:/root/
+     ```
+   * **Login:**
+     ```powershell
+     ssh root@192.168.1.1
+     ```
+   * *(Accept the fingerprint by typing `yes`. No password is required yet.)*
+
+#### 🖥️ **Option B: The "Console" Cowboy (Keyboard + Monitor)**
+*Best if you don't have a PC LAN port or prefer direct Pi 5 console access.*
+
+1. **Wiring:**
+   * **WAN:** Connect your Modem/ONT to the Pi 5 **USB Adapter** (`eth1`).
+   * **Console:** Connect a monitor (Micro-HDMI) and Keyboard to the Pi 5.
+2. **Boot:** Power on the Pi. Wait for the scrolling text to stop.
+3. **Login:**
+   * Press **Enter**.
+   * You should see 'root@openwrt:#'
+4. **Retrieve the Scripts:**
+   * If you dragged the `ci5` folder onto the drive in Step 1.5, move it to your home folder:
+     ```bash
+     cp -r /boot/ci5 /root/
+     cd /root/ci5
+     ```
+   * *Troubleshooting:* If you forgot to preload them, you can plug in a **second** USB drive containing the folder and mount it:
+     ```bash
+     mkdir -p /mnt/usb
+     mount /dev/sda1 /mnt/usb  #  (If 'ci5' folder is on an external SD card: replace sda1 with sdb1)
+     cp -r /mnt/usb/ci5 /root/
+     ```
+
+> [\!IMPORTANT]
+>
+>   - [ ] Run this **ONCE** to define your ISP, Passwords, and Network Identity:
 
 ```bash
 sh setup.sh
