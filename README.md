@@ -228,7 +228,7 @@ You have two ways to access the Pi 5 to start the installation. Choose one:
 
 ------
 
-## 3\. Deploy The Core (Lite) 🌐📶
+## 3\. Deploy The Core (Lite) 🌐🌎
 
 **The "Set and Forget" Router** 🛜
 
