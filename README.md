@@ -209,6 +209,7 @@ You have two ways to access the Pi 5 to start the installation. Choose one:
 * **access to the Pi 5 terminal**
   * **Confirmation**: (*root@openwrt:#*) text present with a blinking input cursor shown to the right
     * indicates ability to enter further commands (*which are noted below*)
+   
 * **'*/root/ci5*' folder present in your Pi 5 Openwrt install directory**
   * **Confirmation**: type '*ls /root/ci5*' - then press the **Enter** key (*do not type the apostrophes*)
     * should return a list showing all of the same files on the '**dreamswag/ci5**' GitHub page
