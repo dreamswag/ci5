@@ -58,7 +58,7 @@ To achieve the intended performance and isolation, wire your system exactly as f
 * **USB 3.0 Port (Middle Blue):** Plug in your **USB Gigabit/2.5G Adapter**.
     * *This is `eth1` (WAN). Connect this to your ISP Modem/ONT.*
 * **Onboard Ethernet:**
-    * *This is `eth0` (LAN). Connect this to R7800 Port 1.*
+    * *This is `eth0` (LAN). Connect this to R7800/AP Port 1.*
 
 ### **2. Netgear R7800 (The Managed Switch/AP)**
 * **Port 1 (LAN):** 🔗 Connect to **Pi 5 Onboard Ethernet**.
