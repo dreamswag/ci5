@@ -54,7 +54,7 @@ Ci5 proves that commodity ARM hardware + open-source software can mechanically o
 
 To achieve the intended performance and isolation, wire your system exactly as follows:
 
-### **1. Raspberry Pi 5 (The Brain)**
+### **1. Raspberry Pi 5 (The Brain/Router)**
 * **USB 3.0 Port (Middle Blue):** Plug in your **USB Gigabit/2.5G Adapter**.
     * *This is `eth1` (WAN). Connect this to your ISP Modem/ONT.*
 * **Onboard Ethernet:**
