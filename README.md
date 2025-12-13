@@ -56,7 +56,7 @@ Usually - "Docker-on-Router" setup would instead mean:
 
 ------
 
-### 👁️ **Optional: The Kill Switch (Schizo Mode)**
+## 👁️ **Optional: The Kill Switch (Schizo Mode)**
 
 [ *For users who prioritize: **Security > Connectivity*** ]
 
