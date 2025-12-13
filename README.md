@@ -6,7 +6,7 @@
 
 > [!NOTE]
 >
-> # 🛸💨 **The Proof** 🟰 **The** 🍰
+> ## 🛸💨 **The Proof** 🟰 **The** 🍰
 >
 > ### Pi 5 Cortex-A76 achieving **+0ms Latency** & **0.2ms Jitter** under full load.
 >
@@ -14,7 +14,7 @@
 >
 > **This is not "good" for a home router. It is statistically perfect.**
 >
-> ###### (Test: 500/500Mbps Fiber via R7800 AP | Active: Suricata IDS + CrowdSec + CAKE)
+> ###### (Test: 500/500Mbps Fiber via R7800 AP | Active: Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Rebound + CAKE)
 > ---
 > ### **[Bufferbloat Result (+ direct download for /docs/.csv)](https://www.waveform.com/tools/bufferbloat?test-id=bb0dc946-bb4e-4b63-a2e5-72f47f80040e)**
 ---
