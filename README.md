@@ -313,12 +313,14 @@ The Wizard requires you to set passwords to prevent locked-out APs. If you skipp
 cat ci5.config
 ```
 
+------
 ### **"How do I apply the R7800 config if I've already set it up?"**
 
 The `r7800_auto.sh` script is an **Enforcer**. It does not merge settings; it overwrites them.
 
   - If your R7800 is already running OpenWrt, simply run the script. It will delete the old interfaces and apply the new VLAN bridge topology automatically.
-
+    
+------
 ### **"Why is my PC on R7800 Port 2 not working?"**
 
 Check the wiring.
@@ -326,6 +328,7 @@ Check the wiring.
   - Port 1 MUST go to the Pi 5.
   - Port 2 is VLAN 10 (Trusted). If your PC is set to a Static IP on a different subnet, it will fail. Ensure PC is DHCP.
 
+------
 ### **"My Bufferbloat is 'B' or 'C', not 'A+'?"**
 
 1.  **Re-Run the Wizard:** You can run the speed tuner manually if your line speed changed:
