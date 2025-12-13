@@ -80,7 +80,7 @@ By default, Ci5 is **Fail-Open** (Connectivity First).
 | -------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | **🤖 Raspberry Pi 5 (4GB / 8GB)** | Cortex-A76 is required for line-rate DPI/SQM. Pi 4 cannot do this. | 8GB mandatory for **Full Stack**.                            |
 | **⚡ USB-C PD PSU (27W+)** | Stability is non-negotiable. Packet processing spikes power. | Official PSU recommended.                                    |
-| **💾 Storage** | **Lite:** MicroSD (A1/A2) is fine. **Full:** USB 3.0 Flash/SSD required. | Logs and Docker I/O will kill SD cards.                      |
+| **💾 Storage** | **Lite:** MicroSD (A1/A2) is fine. **Full:** USB 3.0 Flash/SSD highly recommended. | Logs and Docker I/O will kill SD cards.                      |
 | **🔌 USB 3.0 NIC (WAN)** | Dedicated lane for Internet ingress. Leaves onboard ETH for LAN. | Yes, USB 3.0 works. The latency overhead is negligible vs CAKE gains. |
 | **🛜 Access Point** | Pi 5 onboard Wi-Fi is garbage. Use a dedicated AP.           | Tested with Netgear R7800 (OpenWrt)                 |
 
