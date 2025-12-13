@@ -47,7 +47,7 @@ Ci5 proves that commodity ARM hardware + open-source software can mechanically o
 | Path           | Runs Where        | Job                                      | If It Crashes → Internet Impact              |
 | -------------- | ----------------- | ---------------------------------------- | -------------------------------------------- |
 | **Fast Path**  | Bare metal kernel | Routing · NAT · CAKE SQM · BBR · Unbound | **Still 100% up** – 0 ms latency maintained  |
-| **Smart Path** | Isolated Docker   | Suricata IDS · CrowdSec · Ntopng · Redis | **Still 100% up** – temporarily packet blind |
+| **Smart Path** | Isolated Docker   | Suricata IDS · CrowdSec · Ntopng · Redis · AdGuard | **Still 100% up** – temporarily packet blind |
 
 Even if Docker explodes, Suricata shits itself, and/or you fat-finger a container update: 
 
