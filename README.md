@@ -38,6 +38,10 @@ Ci5 proves that commodity ARM hardware + open-source software can mechanically o
 
 ## 🛡️ The Architecture – Hybrid Control Plane ⚔️
 
+"**Docker-on-Router**" usually means: 
+
+* the entire network loses connectivity as soon as Docker sneezes.
+
 **Why Your Internet Never Dies (Default Behaviour)**
 
 | Path           | Runs Where        | Job                                      | If It Crashes → Internet Impact              |
@@ -49,12 +53,6 @@ Even if Docker explodes, Suricata shits itself, and/or you fat-finger a containe
 
 * the packets keep flowing with perfect CAKE shaping.
 * Zoom call / ranked matchmaking don't care that the IDS just segfaulted.
-
-"Docker-on-Router" usually instead means: 
-
-* the entire network loses connectivity as soon as Docker sneezes.
-
-------
 
 ## 👁️ **Optional: The Kill Switch (Schizo Mode)**
 
