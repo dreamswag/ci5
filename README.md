@@ -36,6 +36,44 @@ Ci5 proves that commodity ARM hardware + open-source software can mechanically o
 
 ------
 
+## 🛡️ The Architecture – Hybrid Control Plane ⚔️
+
+**Why Your Internet Never Dies (Default Behaviour)**
+
+| Path           | Runs Where        | Job                                      | If It Crashes → Internet Impact              |
+| -------------- | ----------------- | ---------------------------------------- | -------------------------------------------- |
+| **Fast Path**  | Bare metal kernel | Routing · NAT · CAKE SQM · BBR · Unbound | **Still 100% up** – 0 ms latency maintained  |
+| **Smart Path** | Isolated Docker   | Suricata IDS · CrowdSec · Ntopng · Redis | **Still 100% up** – temporarily packet blind |
+
+Even if Docker explodes, Suricata shits itself, and/or you fat-finger a container update: 
+
+* the packets keep flowing with perfect CAKE shaping.
+* Zoom call / ranked matchmaking don't care that the IDS just segfaulted.
+
+Usually - "Docker-on-Router" setup would instead mean: 
+
+* the entire network loses connectivity as soon as Docker sneezes.
+
+------
+
+### 👁️ **Optional: The Kill Switch (Schizo Mode)**
+
+[ *For users who prioritize: **Security > Connectivity*** ]
+
+By default, Ci5 is **Fail-Open** (Connectivity First). 
+
+* However - there is also an included optional watchdog script which can be enforced post-installation.
+* Intended for **high-threat environments** by enforcing **Fail-Closed** security.
+
+**Tool:** `extras/paranoia_watchdog.sh`
+
+* **Logic:** It polls critical containers (Suricata & CrowdSec) every 10 seconds.
+* **Action:** If inspection dies, it **physically kills the WAN interface** (`ip link set eth1 down`).
+* **Result:** **No Inspection = No Internet.** 
+  * Traffic only resumes when the security stack is confirmed running again.
+
+------
+
 ## 🛒 Phase 1: **<u>Hardware Essentials</u>** 👨‍🔧
 
 > 🧠 **The Brain (Compute)**
@@ -69,31 +107,11 @@ To achieve the intended performance and isolation, wire your system exactly as f
     * *Role: Access Port (VLAN 30).*
 * **Port 4 (LAN):** 🆘 **Emergency Access**.
     * *Role: Admin/Management (VLAN 1). Use this if you lock yourself out.*
-* **WAN Port:** ❌ **Leave Empty**.
+* **WAN Port:** ❌ **Leave Empty** 
 
-------
+## 💾 Phase 3: **<u>Installation</u>** 🛣️
 
-## 🛡️ Phase 3: The Architecture – Hybrid Control Plane ⚔️
-
-**Why Your Internet Never Dies**
-
-| Path          | Runs Where       | Job                                      | If It Crashes → Internet Impact |
-|---------------|------------------|------------------------------------------|--------------------------------|
-| **Fast Path** | Bare metal kernel| Routing · NAT · CAKE SQM · BBR · Unbound | **Still 100% up** – 0 ms latency maintained |
-| **Smart Path**| Isolated Docker  | Suricata IDS · CrowdSec · Ntopng · Redis · AdGuard | **Still 100% up** – temporarily packet blind |
-
-Even if Docker explodes, Suricata shits itself, and/or you fat-finger a container update: 
-* the packets keep flowing with perfect CAKE shaping.
-* Zoom call / ranked matchmaking don't care that the IDS just segfaulted.
-
-Meanwhile - "Docker-on-Router" setup usually means: 
-* the entire network loses connectivity as soon as Docker sneezes.
-
-------
-
-## 💾 Phase 4: **<u>Installation</u>** 🛣️
-
-### 1. Firmware Generation 🃏
+### 1: Firmware Generation 🃏
 We utilize a custom "Golden Master" OpenWrt image. This pre-bakes the kernel drivers, file systems, and tools needed to run Docker on bare metal.
 **CRITICAL: Use the EXT4 image. SquashFS is read-only and will brick this workflow.**
 
@@ -113,7 +131,7 @@ base-files bcm27xx-gpu-fw bcm27xx-utils bind-dig bind-libs block-mount brcmfmac-
 ```
 </details>
 
-### 1.5. Flashing The Media (Windows 11) 💿
+### 1.5: Flashing The Media (Windows 11) 💿
 **Recommended Tool:** [BalenaEtcher](https://etcher.balena.io/) or [Rufus](https://rufus.ie/).
 
 1. **Insert Media:** Plug your **High-Endurance MicroSD** or **USB 3.0 Drive** into your PC.
@@ -123,19 +141,23 @@ base-files bcm27xx-gpu-fw bcm27xx-utils bind-dig bind-libs block-mount brcmfmac-
    * *If you plan to use a **Keyboard + Monitor**, do this now:*
    1. Unplug and Re-plug the USB drive into your PC.
    2. Windows will detect a small partition named `boot`. Open it.
-   3. Drag your **`ci5` folder** (containing these scripts) directly onto this `boot` drive.
-   4. Eject safely.
+   3. Extract the ci5.rar file (which is provided from downloading this GitHub repo)
+   4. Drag your **`ci5` folder** (containing these scripts) directly onto this `boot` drive.
+   5. Eject safely.
 
 ---
 
-### 2. Initial Access & File Transfer 🧙‍♂️
+### 📁 2: Initial Access & File Transfer 
 
 You have two ways to access the Pi 5 to start the installation. Choose one:
 
-#### 🧑‍💻 **Option A: The "Headless" Pro (Ethernet + SSH)** 
+------
+
+#### 🧑‍💻 <u>**Method A: Ethernet + SSH**</u>  
 *Best for users who want to copy-paste commands from their PC.*
 
 1. **Wiring:**
+   
    * **WAN:** Connect your Modem/ONT to the Pi 5 **USB Adapter** (`eth1`).
    * **LAN:** Connect your PC directly to the Pi 5 **Onboard Ethernet** (`eth0`).
 2. **Connect:**
@@ -143,6 +165,7 @@ You have two ways to access the Pi 5 to start the installation. Choose one:
    * Open PowerShell / Terminal on your PC.
 3. **Transfer & Login:**
    * **Send the Scripts:** (Run from your PC's `ci5` folder location)
+     
      ```powershell
      scp -r ci5 root@192.168.1.1:/root/
      ```
@@ -152,10 +175,13 @@ You have two ways to access the Pi 5 to start the installation. Choose one:
      ```
    * *(Accept the fingerprint by typing `yes`. No password is required yet.)*
 
-#### 🖥️ **Option B: The "Console" Cowboy (Keyboard + Monitor)**
-*Best if you don't have a PC LAN port or prefer direct Pi 5 console access.*
+------
+
+#### 🖥️ <u>Method B: Keyboard + Monitor</u>
+*Best option for those who don't have PC LAN port and/or prefer direct Pi 5 console access*
 
 1. **Wiring:**
+   
    * **WAN:** Connect your Modem/ONT to the Pi 5 **USB Adapter** (`eth1`).
    * **Console:** Connect a monitor (Micro-HDMI) and Keyboard to the Pi 5.
 2. **Boot:** Power on the Pi. Wait for the scrolling text to stop.
@@ -169,54 +195,75 @@ You have two ways to access the Pi 5 to start the installation. Choose one:
      cd /root/ci5
      ```
    * *Troubleshooting:* If you forgot to preload them, you can plug in a **second** USB drive containing the folder and mount it:
+     
      ```bash
      mkdir -p /mnt/usb
      mount /dev/sda1 /mnt/usb  #  (If 'ci5' folder is on an external SD card: replace sda1 with sdb1)
      cp -r /mnt/usb/ci5 /root/
      ```
 
-> [\!IMPORTANT]
+------
+
+### 📂 <u>Regardless of method chosen - you should now have</u>:
+
+* **access to the Pi 5 terminal**
+  * **Confirmation**: (*root@openwrt:#*) text present with a blinking input cursor shown to the right
+    * indicates ability to enter further commands (*which are noted below*)
+* **'*/root/ci5*' folder present in your Pi 5 Openwrt install directory**
+  * **Confirmation**: type '*ls /root/ci5*' - then press the **Enter** key (*do not type the apostrophes*)
+    * should return a list showing all of the same files on the '**dreamswag/ci5**' GitHub page
+
+------
+
+## 🧙‍♂️ 2.5: Run Configuration Wizard
+
+> [!IMPORTANT]
 >
->   - [ ] Run this **ONCE** to define your ISP, Passwords, and Network Identity:
-
-```bash
-sh setup.sh
-```
-
+> >   - [ ] Run this **ONCE** to define your ISP, Passwords, and Network Identity:
+>
+> ```bash
+> /root/ci5/setup.sh
+> ```
+>
 > *This will generate a `ci5.config` file and (optional) AP scripts based on your inputs.*
 
-### 3\. Deploy The Core (Lite) 🌐
+------
 
-**The "Set and Forget" Router**
+## 3\. Deploy The Core (Lite) 🛜🌐
+
+**The "Set and Forget" Router** 🌐
 
   - **Actions:** Resizes storage, Tunes Kernel (0ms), Configures Unbound, **Auto-Tunes SQM**.
   - **Performance:** Max throughput, lowest latency. Zero bloat.
   - **Target:** Gaming, households, people who just want the internet to work perfectly.
 
-> [\!IMPORTANT]
+> [!IMPORTANT]
 >
->   - [ ] **Run this first\! Even if you want the Full stack, this lays the foundation:**
+> >   - [ ] **Run this first\! Even if you want the Full stack, this lays the foundation:**
+>
+> ```bash
+> /root/ci5/install-lite.sh
+> ```
+> *(Note: The Speed Wizard runs automatically at the end. The system will reboot when finished.)*
 
-```bash
-sh install-lite.sh
-```
-*(Note: The Speed Wizard runs automatically at the end. The system will reboot when finished.)*
+------
 
-### 4\. Deploy The Fortress (Full) 🚨
+## 4\. Deploy The Fortress (Full) 🚨🔍
 
-**(Optional) The "Fortress"**
+**(Optional) The "Citadel"** 🏰
 
   - **Actions:** Installs Docker, Suricata (IDS), CrowdSec (IPS), AdGuard Home (AdBlock), Ntopng, Redis.
   - **Capabilities:** Deep Packet Inspection, IP ban-lists, Layer-7 Analysis.
   - **Cost:** Uses \~1.8GB RAM. Requires 4GB+ Pi.
 
-> [\!IMPORTANT]
+> [!IMPORTANT]
 >
->   - [ ] **Reboot after Lite install, then run**:
-
-```bash
-sh install-full.sh
-```
+> > - [ ] **Once reboot is completed after Lite install, run**:
+>
+> ```bash
+> /root/ci5/install-full.sh
+> ```
+>
 
 -----
 
@@ -226,22 +273,35 @@ sh install-full.sh
 
 If you generated the R7800 script in the Wizard:
 
-1.  Connect R7800 **WAN Port** (Temporary) to Pi 5 to transfer file, OR use a USB stick.
-2.  Copy `r7800_auto.sh` to your R7800 `/tmp/` folder.
-3.  SSH into the R7800 and run it:
-    ```bash
-    sh /tmp/r7800\_auto.sh
-    ```
-4.  **REWIRE:** Once finished, move the cable to **LAN 1** as per the Wiring Guide.
+1. Grab the auto-generated file from Pi5 (/root/ci5)
+
+   1.   **scp root@192.168.1.1:/tmp/r7800_auto.sh 'C:\Downloads\ci5'**
+
+2. Connect R7800 **WAN Port** (Temporary) to Pi 5 to transfer file
+
+3. **Copy `r7800_auto.sh` to your R7800 `/tmp/` folde**r:
+
+   1.  Go to the folder containing the 'r7800_auto.sh' file
+   2.  Click the box at the top of the file explorer which co file location  at the top of the folder containing 'r7800_auto.sh': 
+       1.  delete all text (e.g. 'C:\Downloads\ci5') and type 'cmd' instead
+       2.  press Enter -> which should bring up a Command Prompt starting with 'C:\Downloads\ci5>'
+       3.  type '**scp root@192.168.1.1:/tmp/r7800_auto.sh r7800_auto.sh**' and press Enter
+
+4. SSH into the R7800 (ssh root@192.168.1.1) and run it:
+   ```bash
+   /tmp/r7800_auto.sh
+   ```
+
+5. **REWIRE:** Once finished, move the cable to **LAN 1** as per the Wiring Guide.
 
 ### Option B: I have a Unifi / Omada / Asus AP
 
-Check `generic_ap_reference.txt` (generated by the Wizard).
-Configure your AP Controller with:
+Check `generic_ap_reference.txt` (generated by the Wizard)
 
-  - **Trusted SSID** → VLAN **10**
-  - **IoT SSID** → VLAN **30** (Client Isolation: ON)
-  - **Guest SSID** → VLAN **40** (Client Isolation: ON)
+* Configure your AP Controller with:#
+  * **Trusted SSID** → VLAN **10**
+  * **IoT SSID** → VLAN **30** (Client Isolation: ON)
+  * **Guest SSID** → VLAN **40** (Client Isolation: ON)
 
 -----
 
@@ -270,17 +330,17 @@ Check the wiring.
 ### **"My Bufferbloat is 'B' or 'C', not 'A+'?"**
 
 1.  **Re-Run the Wizard:** You can run the speed tuner manually if your line speed changed:
-    [TRIPLECOMMA]bash
-    sh extras/speed\_wizard.sh
-    [TRIPLECOMMA]
+    ```bash
+    sh extras/speed_wizard.sh
+    ```
 2.  **Disable Offloading:** Ensure you have disabled hardware offloading. Run:
-    [TRIPLECOMMA]bash
+    ```bash
     ethtool -K eth1 gro off gso off tso off
-    [TRIPLECOMMA]
+    ```
 
 -----
 
-> [\!TIP]
+> [!TIP]
 >
 > ```
 > "Fuck all this Dream Machine dick-measuring contest. We all gon be dead in 100 years.
