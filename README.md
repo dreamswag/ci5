@@ -52,7 +52,7 @@ Ci5 proves that commodity ARM hardware + open-source software can mechanically o
 Even if Docker explodes, Suricata shits itself, and/or you fat-finger a container update: 
 
 * the packets keep flowing with perfect CAKE shaping.
-* work call and/or ranked matchmaking don't care that Suricata just segfaulted.
+* Zoom call and/or ranked matchmaking don't care that Suricata just segfaulted.
 
 ## 👁️ **Optional: The Kill Switch (Schizo Mode)**
 
