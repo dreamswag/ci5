@@ -372,7 +372,7 @@ docker-compose up -d
 >
 > ```
 > "Fuck all this Dream Machine dick-measuring contest. We all gon be dead in 100 years.
-> Let the kids have the unmaintained Raspberry-Ci5 auto-install scripts w/ Docker, NIDs & 0ms lag"
+> Let the kids have the unmaintained Raspberry-Ci5 auto-install scripts w/ NIDs & 0ms lag"
 > ```
 >
 > ------
