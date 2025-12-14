@@ -1,0 +1,4 @@
+.DS_Store 
+*.img.gz 
+*.zip 
+ci5.config 
