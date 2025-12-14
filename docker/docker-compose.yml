@@ -1,18 +1,49 @@
 version: '3.8'
+
+# Ci5 Docker Stack (v7.4-RC-1 - With Health Checks)
+
 services:
   redis:
     image: redis:7.2-alpine
+    container_name: redis
     restart: always
     network_mode: bridge
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   ntopng:
     image: ntop/ntopng:5.6-stable
+    container_name: ntopng
     restart: always
     network_mode: host
-    depends_on: [redis]
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/lua/rest/v2/get/system/health.lua"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   adguardhome:
     image: adguard/adguardhome:latest
+    container_name: adguardhome
     restart: unless-stopped
     network_mode: host
     volumes:
@@ -22,19 +53,60 @@ services:
       - 53:53/tcp
       - 53:53/udp
       - 3000:3000/tcp
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   crowdsec:
     image: crowdsecurity/crowdsec:v1.6.2
+    container_name: crowdsec
     restart: unless-stopped
     network_mode: host
+    environment:
+      - COLLECTIONS=crowdsecurity/linux crowdsecurity/suricata
     volumes:
       - ./crowdsec/config:/etc/crowdsec
       - ./crowdsec/data:/var/lib/crowdsec/data
+      - ./suricata:/var/log/suricata:ro
+    healthcheck:
+      test: ["CMD", "cscli", "version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   suricata:
     image: jasonish/suricata:7.0.3
+    container_name: suricata
     restart: unless-stopped
     network_mode: host
-    cap_add: [NET_ADMIN, NET_RAW]
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
     volumes:
       - ./suricata:/var/log/suricata
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -x Suricata-Main"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

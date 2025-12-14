@@ -12,13 +12,45 @@ echo -e "${BLUE}   🃏 Ci5 Infrastructure Setup (v7.4-RC-1)${NC}"
 echo -e "${BLUE}==========================================${NC}"
 echo ""
 
+# ─────────────────────────────────────────────────────────────
+# PRE-FLIGHT CHECK
+# ─────────────────────────────────────────────────────────────
+if [ -f "preflight.sh" ]; then
+    echo -e "${YELLOW}[0] Running Pre-Flight Checks...${NC}"
+    echo ""
+    if ! sh preflight.sh; then
+        echo ""
+        echo -e "${RED}Pre-flight checks failed. Fix issues above before continuing.${NC}"
+        exit 1
+    fi
+    echo ""
+fi
+
+# ─────────────────────────────────────────────────────────────
+# AUTO-DETECT USB NIC
+# ─────────────────────────────────────────────────────────────
+DETECTED_WAN=""
+for iface in /sys/class/net/*; do
+    name=$(basename "$iface")
+    [ "$name" = "lo" ] && continue
+    [ "$name" = "eth0" ] && continue
+    [ "$name" = "wlan0" ] && continue
+    if readlink -f "$iface/device" 2>/dev/null | grep -q usb; then
+        DETECTED_WAN="$name"
+        break
+    fi
+done
+
 # 1. WAN / ISP
 echo -e "${YELLOW}[1] Internet Connection (ISP)${NC}"
 echo "Detected Interfaces:"
-ip -br link | grep -E 'eth|enp|usb' | awk '{print "   - " $1}'
+ip -br link | grep -E '^(eth|enx|usb)' | awk '{print "   - " $1}'
+if [ -n "$DETECTED_WAN" ]; then
+    echo -e "   ${GREEN}(Auto-detected USB NIC: $DETECTED_WAN)${NC}"
+fi
 echo ""
-read -p "   WAN Interface [eth1]: " WAN_IFACE
-WAN_IFACE=${WAN_IFACE:-eth1}
+read -p "   WAN Interface [${DETECTED_WAN:-eth1}]: " WAN_IFACE
+WAN_IFACE=${WAN_IFACE:-${DETECTED_WAN:-eth1}}
 
 if ! ip link show "$WAN_IFACE" >/dev/null 2>&1; then
     echo -e "${RED}   ! Error: Interface $WAN_IFACE does not exist.${NC}"
@@ -130,7 +162,6 @@ uci set wireless.guest_5g=wifi-iface; uci set wireless.guest_5g.device='radio0';
 uci commit; reboot
 APCONF
     chmod +x "$R7800_SCRIPT"
-    # Copy to /tmp and /www for multiple retrieval methods
     cp "$R7800_SCRIPT" /tmp/
     cp "$R7800_SCRIPT" /www/r7800.sh
     chmod +r /www/r7800.sh

@@ -1,14 +1,12 @@
 #!/bin/sh
-# 🕵️‍♂️ Paranoia Watchdog
+# 🕵️‍♂️ Paranoia Watchdog (v7.4-RC-1)
 
-# Load Config
 if [ -f "$(dirname "$0")/../ci5.config" ]; then
     . "$(dirname "$0")/../ci5.config"
 elif [ -f "/root/ci5/ci5.config" ]; then
     . "/root/ci5/ci5.config"
 fi
 
-# Target correct WAN
 if [ -n "$WAN_VLAN" ] && [ "$WAN_VLAN" -ne 0 ]; then
     WAN="${WAN_IFACE}.${WAN_VLAN}"
 else
@@ -27,7 +25,6 @@ while true; do
         ip link set $WAN down
         logger -t ci5-watchdog "🚨 KILL SWITCH: $WAN DOWN"
     else
-        # Only up if it was down (check logic can be improved but this works)
         if ip link show $WAN | grep -q "DOWN"; then
             ip link set $WAN up
             logger -t ci5-watchdog "✅ Systems Recovered"

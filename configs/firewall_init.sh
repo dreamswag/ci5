@@ -1,13 +1,23 @@
 #!/bin/sh
+# 🔥 Ci5 Firewall Init (v7.4-RC-1 - Idempotent)
 echo "🔥 Configuring Firewall..."
+
+# Clear custom zones first (idempotent)
 uci -q delete firewall.docker
 uci -q delete firewall.iot
 uci -q delete firewall.guest
+
+# Clear custom rules (find and delete by name)
+while uci -q delete firewall.@rule[-1]; do :; done 2>/dev/null
+while uci -q delete firewall.@forwarding[-1]; do :; done 2>/dev/null
+
+# Defaults
 uci set firewall.@defaults[0].input='REJECT'
 uci set firewall.@defaults[0].output='ACCEPT'
 uci set firewall.@defaults[0].forward='REJECT'
 uci set firewall.@defaults[0].synflood_protect='1'
 
+# WAN Zone
 uci set firewall.@zone[1].name='wan'
 uci set firewall.@zone[1].input='REJECT'
 uci set firewall.@zone[1].output='ACCEPT'
@@ -18,6 +28,7 @@ uci -q del firewall.@zone[1].network
 uci add_list firewall.@zone[1].network='wan'
 uci add_list firewall.@zone[1].network='wan6'
 
+# LAN Zone
 uci set firewall.@zone[0].name='lan'
 uci set firewall.@zone[0].input='ACCEPT'
 uci set firewall.@zone[0].output='ACCEPT'
@@ -27,6 +38,7 @@ uci add_list firewall.@zone[0].network='lan'
 uci add_list firewall.@zone[0].network='vlan10'
 uci add_list firewall.@zone[0].network='vlan20'
 
+# IoT Zone
 uci add firewall zone
 uci set firewall.@zone[-1].name='iot'
 uci set firewall.@zone[-1].input='REJECT'
@@ -34,6 +46,7 @@ uci set firewall.@zone[-1].output='ACCEPT'
 uci set firewall.@zone[-1].forward='REJECT'
 uci add_list firewall.@zone[-1].network='vlan30'
 
+# Guest Zone
 uci add firewall zone
 uci set firewall.@zone[-1].name='guest'
 uci set firewall.@zone[-1].input='REJECT'
@@ -41,6 +54,7 @@ uci set firewall.@zone[-1].output='ACCEPT'
 uci set firewall.@zone[-1].forward='REJECT'
 uci add_list firewall.@zone[-1].network='vlan40'
 
+# Docker Zone
 uci add firewall zone
 uci set firewall.@zone[-1].name='docker'
 uci set firewall.@zone[-1].input='REJECT'
@@ -48,6 +62,7 @@ uci set firewall.@zone[-1].output='ACCEPT'
 uci set firewall.@zone[-1].forward='REJECT'
 uci add_list firewall.@zone[-1].network='docker'
 
+# Forwardings
 for zone in lan iot guest docker; do
     uci add firewall forwarding
     uci set firewall.@forwarding[-1].src="$zone"
@@ -57,6 +72,7 @@ uci add firewall forwarding
 uci set firewall.@forwarding[-1].src='lan'
 uci set firewall.@forwarding[-1].dest='docker'
 
+# Rules
 for zone in iot guest; do
     uci add firewall rule
     uci set firewall.@rule[-1].name="Allow-DHCP-$zone"
