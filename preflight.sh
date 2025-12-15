@@ -6,6 +6,7 @@
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 FATAL=0
 WARN=0
+RAM_4GB_ACKNOWLEDGED=0
 
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}   🛫 Ci5 Pre-Flight Validation (v7.4-RC-1)${NC}"
@@ -33,7 +34,7 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────
-# 2. RAM CHECK
+# 2. RAM CHECK (Updated: 4GB allowed with warning)
 # ─────────────────────────────────────────────────────────────
 echo -n "[2/10] System RAM... "
 TOTAL_RAM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
@@ -42,8 +43,40 @@ TOTAL_RAM_GB=$((TOTAL_RAM_KB / 1024 / 1024))
 if [ "$TOTAL_RAM_GB" -ge 7 ]; then
     echo -e "${GREEN}✓ ${TOTAL_RAM_GB}GB (Full Stack Ready)${NC}"
 elif [ "$TOTAL_RAM_GB" -ge 3 ]; then
-    echo -e "${YELLOW}⚠ ${TOTAL_RAM_GB}GB (Lite Only - 8GB required for Full Stack)${NC}"
-    WARN=1
+    # 4GB Pi 5 detected - allow with explicit warning
+    echo -e "${YELLOW}⚠ ${TOTAL_RAM_GB}GB Detected${NC}"
+    echo ""
+    echo -e "${YELLOW}╔══════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${YELLOW}║  ⚠️  4GB RASPBERRY PI 5 STABILITY WARNING                        ║${NC}"
+    echo -e "${YELLOW}╠══════════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${YELLOW}║  Testing shows ~1.8GB RAM usage during active Bufferbloat tests  ║${NC}"
+    echo -e "${YELLOW}║  with the Full Stack running. While this leaves headroom on 4GB, ║${NC}"
+    echo -e "${YELLOW}║  the following risks exist:                                       ║${NC}"
+    echo -e "${YELLOW}║                                                                   ║${NC}"
+    echo -e "${YELLOW}║  • OOM kills possible under heavy IDS + traffic load             ║${NC}"
+    echo -e "${YELLOW}║  • Suricata may drop packets if RAM is exhausted                 ║${NC}"
+    echo -e "${YELLOW}║  • Docker containers may restart unexpectedly                    ║${NC}"
+    echo -e "${YELLOW}║  • System instability during firmware/rule updates               ║${NC}"
+    echo -e "${YELLOW}║                                                                   ║${NC}"
+    echo -e "${YELLOW}║  RECOMMENDATION: 8GB model for Full Stack production use.        ║${NC}"
+    echo -e "${YELLOW}║  4GB is suitable for: Lite Stack, testing, or light home use.    ║${NC}"
+    echo -e "${YELLOW}╚══════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${YELLOW}Do you acknowledge these risks and wish to proceed?${NC}"
+    echo "Type 'I UNDERSTAND' to continue with 4GB configuration:"
+    read -r ACKNOWLEDGE_4GB
+    
+    if [ "$ACKNOWLEDGE_4GB" = "I UNDERSTAND" ]; then
+        echo -e "${GREEN}    ✓ 4GB risk acknowledged. Proceeding...${NC}"
+        RAM_4GB_ACKNOWLEDGED=1
+        # Mark as warning, not fatal - user has explicitly acknowledged
+        WARN=1
+    else
+        echo -e "${RED}    ✗ Acknowledgment not received. Aborting.${NC}"
+        echo "    For Full Stack stability, use 8GB Raspberry Pi 5."
+        echo "    For Lite Stack (no Docker/IDS), 4GB is fully supported."
+        FATAL=1
+    fi
 else
     echo -e "${RED}✗ ${TOTAL_RAM_GB}GB (Minimum 4GB Required)${NC}"
     FATAL=1
@@ -233,6 +266,9 @@ if [ "$FATAL" -gt 0 ]; then
     exit 1
 elif [ "$WARN" -gt 0 ]; then
     echo -e "${YELLOW}   ⚠️  PRE-FLIGHT: WARNINGS${NC}"
+    if [ "$RAM_4GB_ACKNOWLEDGED" -eq 1 ]; then
+        echo -e "${YELLOW}   4GB RAM acknowledged. Lite Stack recommended.${NC}"
+    fi
     echo -e "${YELLOW}   Proceed with caution. Review warnings above.${NC}"
     echo -e "${BLUE}========================================${NC}"
     echo ""
