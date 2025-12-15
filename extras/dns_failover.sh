@@ -1,5 +1,5 @@
 #!/bin/sh
-# 🛡️ Ci5 DNS Failover Watchdog v2.0
+# 🛡️ Ci5 DNS Failover Watchdog v7.4-RC-1
 # Logic: AdGuard (53) -> Unbound (5335). If AdGuard dies, Unbound takes 53.
 
 ADGUARD_CONTAINER="adguard"
