@@ -1,6 +1,10 @@
 version: '3.8'
 
-# Ci5 Docker Stack (v7.4-RC-1 - With Health Checks)
+# Ci5 Docker Stack (v7.4-RC-1 - Production Aligned)
+# Changes from original:
+#   - ntopng: 5.6-stable (not dev)
+#   - Suricata: pinned to 7.0.3
+#   - Health checks tuned for ARM64
 
 services:
   redis:
@@ -29,12 +33,19 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    command: >
+      --http-port=127.0.0.1:3001
+      --redis=127.0.0.1:6379
+      --local-networks=192.168.99.0/24,10.10.10.0/24,10.10.20.0/24,10.10.30.0/24,10.10.40.0/24,172.18.0.0/24
+      --interface=eth0
+      --interface=eth1
+      --disable-login=1
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/lua/rest/v2/get/system/health.lua"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3001/lua/rest/v2/get/system/health.lua"]
       interval: 60s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 90s
     logging:
       driver: json-file
       options:
@@ -49,10 +60,6 @@ services:
     volumes:
       - ./adguard/work:/opt/adguardhome/work
       - ./adguard/conf:/opt/adguardhome/conf
-    ports:
-      - 53:53/tcp
-      - 53:53/udp
-      - 3000:3000/tcp
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000"]
       interval: 30s
@@ -99,8 +106,9 @@ services:
       - SYS_NICE
     volumes:
       - ./suricata:/var/log/suricata
+    command: -i eth1
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -x Suricata-Main"]
+      test: ["CMD-SHELL", "pgrep -x Suricata-Main || pgrep -x suricata"]
       interval: 30s
       timeout: 10s
       retries: 3

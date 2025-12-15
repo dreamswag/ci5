@@ -1,0 +1,37 @@
+#!/bin/sh
+# 🛡️ Ci5 PPPoE Qdisc Guard (v7.4-RC-1)
+#
+# Problem: When using PPPoE, some systems apply CAKE to both:
+#   - eth1 (physical interface) ← CORRECT
+#   - pppoe-wan (virtual interface) ← WRONG (causes double shaping)
+#
+# Solution: This hotplug script removes any qdisc from pppoe-wan
+#           whenever the WAN interface comes up.
+#
+# Install:
+#   cp pppoe_noqdisc.hotplug /etc/hotplug.d/iface/99-pppoe-noqdisc
+#   chmod +x /etc/hotplug.d/iface/99-pppoe-noqdisc
+
+[ "$ACTION" = "ifup" ] || exit 0
+[ "$INTERFACE" = "wan" ] || exit 0
+
+# Small delay to let the interface fully initialize
+sleep 2
+
+# Find any pppoe interface
+PPPOE_DEV=$(ip link show 2>/dev/null | grep -o 'pppoe-[^:@]*' | head -1)
+
+if [ -n "$PPPOE_DEV" ]; then
+    # Check if CAKE or any complex qdisc is on the pppoe interface
+    CURRENT_QDISC=$(tc qdisc show dev "$PPPOE_DEV" 2>/dev/null | head -1)
+    
+    if echo "$CURRENT_QDISC" | grep -qE '(cake|fq_codel|htb|hfsc)'; then
+        tc qdisc del dev "$PPPOE_DEV" root 2>/dev/null
+        
+        if [ $? -eq 0 ]; then
+            logger -t ci5-sqm "Removed spurious qdisc from $PPPOE_DEV (was: $CURRENT_QDISC)"
+        fi
+    fi
+fi
+
+exit 0
