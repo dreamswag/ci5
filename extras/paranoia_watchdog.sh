@@ -1,34 +1,12 @@
 #!/bin/sh
-# 🕵️‍♂️ Paranoia Watchdog (v7.4-RC-1)
-
-if [ -f "$(dirname "$0")/../ci5.config" ]; then
-    . "$(dirname "$0")/../ci5.config"
-elif [ -f "/root/ci5/ci5.config" ]; then
-    . "/root/ci5/ci5.config"
-fi
-
-if [ -n "$WAN_VLAN" ] && [ "$WAN_VLAN" -ne 0 ]; then
-    WAN="${WAN_IFACE}.${WAN_VLAN}"
-else
-    WAN="${WAN_IFACE:-eth1}"
-fi
-
-CRITICAL="suricata crowdsec"
-
+# 👁️ Ci5 Paranoia Watchdog (Optional Security)
+# Checks if Suricata is running. If not, kills WAN.
+CHECK_INTERVAL=5
 while true; do
-    FAIL=0
-    for c in $CRITICAL; do
-        if ! docker ps | grep -q "$c"; then FAIL=1; fi
-    done
-
-    if [ $FAIL -eq 1 ]; then
-        ip link set $WAN down
-        logger -t ci5-watchdog "🚨 KILL SWITCH: $WAN DOWN"
-    else
-        if ip link show $WAN | grep -q "DOWN"; then
-            ip link set $WAN up
-            logger -t ci5-watchdog "✅ Systems Recovered"
-        fi
+    if ! docker ps | grep -q suricata; then
+        logger -t paranoia "🚨 SECURITY FAILURE - KILLING WAN"
+        ifdown wan
+        exit 1
     fi
-    sleep 10
+    sleep $CHECK_INTERVAL
 done
