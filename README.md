@@ -55,7 +55,7 @@ Even if Docker explodes, Suricata shits itself, and/or you fat-finger a containe
 
 ------
 
-## 👁️ **Optional: Fail-Closed Security Kill Switch**
+## 👁️ **Optional: Fail-Closed Security (Kill Switch)**
 
 *For users who prioritize: **Security > Connectivity***
 
