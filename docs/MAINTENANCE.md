@@ -78,7 +78,7 @@ The Pi 4's **Cortex-A72** cannot achieve what the Pi 5's **Cortex-A76** delivers
 
 ---
 
-## Raspberry Pi 5 (4GB): Technically Possible, Spiritually Inadvisable
+## 🪫 Raspberry Pi 5 (4GB): Technically Possible, Spiritually Inadvisable 🪫
 
 The 4GB model *can* run the Lite stack comfortably - and *might* run the Full stack under light load.
 
@@ -104,7 +104,7 @@ The 4GB model *can* run the Lite stack comfortably - and *might* run the Full st
 
 ---
 
-## USB NIC Compatibility
+## 🌐 USB NIC Compatibility 🌐
 
 **Validated chipsets:**
 - **RTL8153** (*most common*)
@@ -333,8 +333,8 @@ cat /root/*_bone_marrow_*.md
    1. (*avoid Gemini 'Fast' model as much as possible*)
 
 2. Upload/paste the entire Ci5 repository 
-   1. GitHub link likely won't work based on current models - so either:
-      1. upload the entire folder (via **Gemini 'Import Code'**)
+   1. Providing the GitHub link inside your prompt won't work based on current models - so either:
+      1. upload the entire folder / paste the repo link (via **Gemini 'Import Code'**)
       2. Fork the repo, and import directly (via **Claude 'Add from GitHub'**)
 
 3. Attach your `bone_marrow_report.md`
@@ -374,7 +374,7 @@ cat /root/*_bone_marrow_*.md
 
 ---
 
-## 🤔 Why This Process? 🤔
+## 🤔 Why This Process? 🧐
 
 **This is the exact workflow the repository creator follows.**
 
