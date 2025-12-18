@@ -6,7 +6,10 @@
 >
 > # **📊 Realtime Response Under Load (RRUL) 📊**
 >
-> ###### RRUL 30s Sustained: 500/500Mbps ONT Fiber & Packet Offloading Disabled
+> ###### RRUL 30s Sustained:
+> ###### > 500/500Mbps ONT Fiber
+> ###### > USB 3.0 Gigabit NIC (WAN)
+> ###### > Packet Offloading Disabled
 > ![rrul.png](docs/images/rrul.png)
 > ###### (Active: Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Unbound + CAKE)
 >
@@ -29,7 +32,7 @@
 
 Most routers are **Tier 1 Garbage** (ISP/Consumer) or **Tier 3 Overkill** ($600+ Enterprise/Vendor-Locked). 
 
-Ci5 proves that commodity ARM hardware + open-source software can mechanically outperform proprietary appliances costing 4x as much:
+**Ci5 proves that commodity ARM hardware + open-source software can mechanically outperform proprietary appliances costing 4x as much**:
 
 | **Model**             | **Price (£)** | **Latency / Jitter** | **IDS Throughput** |       **Architecture**       | **Freedom?**   |
 | --------------------- | ------------- | :------------------: | :----------------: | :--------------------------: | :------------- |
@@ -40,7 +43,9 @@ Ci5 proves that commodity ARM hardware + open-source software can mechanically o
 
 ## 🛡️ The Architecture – Hybrid Control Plane ⚔️
 
-"**Docker-on-Router**" usually means the entire network loses connectivity as soon as Docker sneezes. Ci5 decouples these functions:
+"**Docker-on-Router**" usually means the entire network loses connectivity as soon as Docker sneezes. 
+
+**Ci5 decouples these functions**:
 
 | Path           | Runs Where        | Job                                                | If It Crashes → Internet Impact              |
 | -------------- | ----------------- | -------------------------------------------------- | -------------------------------------------- |
@@ -49,7 +54,7 @@ Ci5 proves that commodity ARM hardware + open-source software can mechanically o
 
 ------
 
-# 🛣️ **Installation**
+# 🛣️ **Installation** 🛣️
 
 ## ⚡ **Native**
 ### For automated deployment & optimization - run via Raspberry Pi 5's terminal:
@@ -58,7 +63,7 @@ Ci5 proves that commodity ARM hardware + open-source software can mechanically o
 curl ci5.run/free | sh
 ```
 ## 📡 **Source**
-### To audit code or fetch raw files (this repo):
+### To audit code or fetch raw files (from this repo):
 ```
 # Example: Fetch raw file via CDN
 curl ci5.host/install-lite.sh
@@ -69,7 +74,6 @@ curl ci5.host/install-lite.sh
 ------
 
 > [!TIP]
->
 > ```
 > "Fuck all this Dream Machine dick-measuring contest. We all gon be dead in 100 years.
 > Let the kids have the unmaintained Raspberry-Ci5 auto-install scripts w/ NIDs & 0ms bufferbloat"
