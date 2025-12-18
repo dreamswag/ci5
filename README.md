@@ -1,7 +1,6 @@
 # 📡🕵️‍♂️ Raspberry-Ci5: The Net Correctional 📊🛰️
 
-> ###### **Status:** `Functional` 🌱 (Class A Operational)
-
+#### 📟 [ci5.run](https://github.com/dreamswag/ci5.run): auto ~ 🧪 [ci5.host](https://github.com/dreamswag/ci5.host): tl;dr ~ 🔬 [ci5.network](https://github.com/dreamswag/ci5.network): docs
 ------
 
 > [!NOTE]
