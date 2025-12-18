@@ -11,7 +11,7 @@
 > ###### > USB 3.0 Gigabit NIC (WAN)
 > ###### > Packet Offloading Disabled
 > ![rrul.png](docs/images/rrul.png)
-> #### 46% Peak CPU (All Cores):
+> #### Peak CPU Saturation (All Cores): 46% 
 > ###### > Active: (Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Unbound + CAKE)
 >![rrul_peak.jpg](RRUL_peak.jpg)
 > ## **Throughput is volume; Latency is discipline.**
