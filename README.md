@@ -32,11 +32,11 @@
 
 Most routers are **Tier 1 Garbage** (ISP/Consumer) or **Tier 3 Overkill** ($600+ Enterprise/Vendor-Locked). 
 
-**Ci5 proves that commodity ARM hardware + open-source software can mechanically outperform proprietary appliances costing 4x as much**:
+**Ci5 proves commodity ARM hardware + open-source software can mechanically outperform proprietary appliances costing 4x more**:
 
 | **Model**             | **Price (£)** | **Latency / Jitter** | **IDS Throughput** |       **Architecture**       | **Freedom?**   |
 | --------------------- | ------------- | :------------------: | :----------------: | :--------------------------: | :------------- |
-| **Pi5 OpenWrt (Ci5)** | **£130**      |  **✅ +0ms / 0.2ms**  |   **~920 Mbps**    | **Hybrid (Kernel + Docker)** | **🔓 Absolute** |
+| **Pi5 OpenWrt (Ci5)** | **£130**      |  **✅ +0ms / 0.5ms**  |   **~920 Mbps**    | **Hybrid (Kernel + Docker)** | **🔓 Absolute** |
 | Ubiquiti UDM-SE       | £480          |     ⚠️ +3ms / 2ms     |      3.5 Gbps      |          Monolithic          | 🔒 Vendor Lock  |
 
 ------
