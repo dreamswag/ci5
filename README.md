@@ -52,7 +52,7 @@ Ci5 proves that commodity ARM hardware + open-source software can mechanically o
 # 🛣️ **Installation**
 
 ## ⚡ **Native**
-### For automated deployment & optimization - run the following command via Raspberry Pi 5's terminal:
+### For automated deployment & optimization - run via Raspberry Pi 5's terminal:
 ```bash
 # Initialize / Liberate
 curl ci5.run/free | sh
