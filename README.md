@@ -27,7 +27,9 @@
 
 ## 📉 **The "Why" (Market Correction)** 📈
 
-Most routers are **Tier 1 Garbage** (ISP/Consumer) or **Tier 3 Overkill** ($600+ Enterprise/Vendor-Locked). Ci5 proves that commodity ARM hardware + open-source software can mechanically outperform proprietary appliances costing 4x as much.
+Most routers are **Tier 1 Garbage** (ISP/Consumer) or **Tier 3 Overkill** ($600+ Enterprise/Vendor-Locked). 
+
+Ci5 proves that commodity ARM hardware + open-source software can mechanically outperform proprietary appliances costing 4x as much:
 
 | **Model**             | **Price (£)** | **Latency / Jitter** | **IDS Throughput** |       **Architecture**       | **Freedom?**   |
 | --------------------- | ------------- | :------------------: | :----------------: | :--------------------------: | :------------- |
@@ -47,31 +49,28 @@ Most routers are **Tier 1 Garbage** (ISP/Consumer) or **Tier 3 Overkill** ($600+
 
 ------
 
-## 🛣️ **Deployment Protocols**
+# 🛣️ **Installation Protocols**
 
-### We do not provide a "Download" button. We provide a **Command Line Interface**.
+## ⚡ **Quick Install**
 
-### ⚡ **Quick Install (The Verb)**
-
-For automated deployment, optimization, and healing, utilize the `ci5.run` terminal:
-
+### For automated deployment & optimization - run the following command via Raspberry Pi 5's native terminal:
 ```bash
 # Initialize / Liberate
 curl ci5.run/free | sh
 ```
 -------
 
-### 🔬 **Advanced / Manual (The Brain)**
+## 🔬 **Advanced / Manual**
 
-#### For hardware compatibility lists, manual build instructions, binaries, and FAQs:
+### For hardware compatibility lists, manual build instructions, binaries, and FAQs:
 
-**[ci5.network](https://github.com/dreamswag/ci5.network)**
+#### > **👉 [ci5.network](https://github.com/dreamswag/ci5.network)**
 
 -------
 
-### 📡 **Source / Raw (The Host)**
+## 📡 **Source / Raw**
 
-To audit code or fetch raw files (this repo):
+###To audit code or fetch raw files (this repo):
 
 ```
 # Example: Fetch raw file via CDN
