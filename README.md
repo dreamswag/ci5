@@ -19,7 +19,7 @@
 > ### **1. Network does not buckle under load:**
 >
 > * **Status:** Saturated (500/500 Mbps)
-> * *Visual:* Maximum throughput (Top/Middle blocks)
+> * *Visual:* **Maximum throughput** (Top/Middle blocks)
 >
 > ### **2. Traffic queued based on packet priority near-instantly:**
 >
