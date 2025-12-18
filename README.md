@@ -6,12 +6,13 @@
 >
 > # **📊 Realtime Response Under Load (RRUL) 📊**
 >
-> ###### RRUL 30s Sustained:
+> #### RRUL 30s Sustained:
 > ###### > 500/500Mbps ONT Fiber
 > ###### > USB 3.0 Gigabit NIC (WAN)
 > ###### > Packet Offloading Disabled
 > ![rrul.png](docs/images/rrul.png)
-> ###### > (Active: Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Unbound + CAKE)
+> #### 46% Peak CPU (All Cores):
+> ###### > Active: (Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Unbound + CAKE)
 >![rrul_peak.jpg](RRUL_peak.jpg)
 > ## **Throughput is volume; Latency is discipline.**
 >
