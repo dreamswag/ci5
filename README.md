@@ -32,7 +32,7 @@
 
 Most routers are **Tier 1 Garbage** (ISP/Consumer) or **Tier 3 Overkill** ($600+ Enterprise/Vendor-Locked). 
 
-**Ci5 proves commodity ARM hardware + open-source software can mechanically outperform proprietary appliances costing 4x more**:
+**Ci5 proves commodity ARM hardware + open-source software can mechanically outperform proprietary appliances costing 4x as much**:
 
 | **Model**             | **Price (£)** | **Latency / Jitter** | **IDS Throughput** |       **Architecture**       | **Freedom?**   |
 | --------------------- | ------------- | :------------------: | :----------------: | :--------------------------: | :------------- |
