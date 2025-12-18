@@ -49,34 +49,22 @@ Ci5 proves that commodity ARM hardware + open-source software can mechanically o
 
 ------
 
-# 🛣️ **Installation Protocols**
+# 🛣️ **Installation**
 
-## ⚡ **Quick Install**
-
-### For automated deployment & optimization - run the following command via Raspberry Pi 5's native terminal:
+## ⚡ **Native**
+### For automated deployment & optimization - run the following command via Raspberry Pi 5's terminal:
 ```bash
 # Initialize / Liberate
 curl ci5.run/free | sh
 ```
--------
-
-## 🔬 **Advanced / Manual**
-
-### For hardware compatibility lists, manual build instructions, binaries, and FAQs:
-
-#### > **👉 [ci5.network](https://github.com/dreamswag/ci5.network)**
-
--------
-
-## 📡 **Source / Raw**
-
-###To audit code or fetch raw files (this repo):
-
+## 📡 **Source**
+### To audit code or fetch raw files (this repo):
 ```
 # Example: Fetch raw file via CDN
 curl ci5.host/scripts/install-lite.sh
 ```
-
+## 🔬 **Manual**
+### For hardware compatibility lists, manual build instructions, binaries, and FAQs: 👉 **[ci5.network](https://github.com/dreamswag/ci5.network)**
 ------
 
 > [!TIP]
