@@ -1,24 +1,26 @@
-# 📡🕵️‍♂️ Raspberry-Ci5: The Net Correctional 📊🛰️
+# 📡 🛸 Raspberry-Ci5: The Net Correctional 💨 🛰️
 
-#### 📟 [ci5.run](https://github.com/dreamswag/ci5.run): auto ~ 🧪 [ci5.host](https://github.com/dreamswag/ci5.host): tl;dr ~ 🔬 [ci5.network](https://github.com/dreamswag/ci5.network): docs
-------
+###### 📟 [ci5.run](https://github.com/dreamswag/ci5.run): auto ~ 🧪 [ci5.host](https://github.com/dreamswag/ci5.host): tl;dr ~ 🔬 [ci5.network](https://github.com/dreamswag/ci5.network): docs
+
 
 > [!NOTE]
 >
-> # 🛸💨 **The Proof** 🟰 **The** 🍰
->
-> ### Pi 5 Cortex-A76 achieving **+0ms Latency** & **0.2ms Jitter** under full load.
->
-> ![buffer.png](docs/images/buffer.png)
->
-> **This is not "good" for a home router. It is statistically perfect.**
->
-> ###### (Test: 500/500Mbps Fiber via R7800 AP & Packet Offloading Disabled)
-> ###### (Active: Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Rebound + CAKE)
+> ## **📊 Realtime Response Under Load (RRUL) 📊**
+>  > ###### RRUL 30s Sustained: 500/500Mbps ONT Fiber & Packet Offloading Disabled
+> ![rrul.png](docs/images/rrul.png)
+> > ###### (Active: Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Rebound + CAKE)
+> ## **Throughput is volume; Latency is discipline.**
+> ### **Network does not buckle under load:**
+> 
+> *  > **Status:** Saturated (500/500 Mbps)
+>   * maximum throughput (_top/middle_)
+> 
+> ### **Traffic queued based on packet priority near-instantly:**
+> 
+> *  > **Jitter:** ±0.2ms (Imperceptible)
+>   * **near-zero latency drift** (_bottom flatline_)
 > ------
-> ### **[Bufferbloat Result (+ direct download for /docs/.csv)](https://www.waveform.com/tools/bufferbloat?test-id=bb0dc946-bb4e-4b63-a2e5-72f47f80040e)**
-
-------
+> ###### **[External Verification (Waveform)](https://www.waveform.com/tools/bufferbloat?test-id=bb0dc946-bb4e-4b63-a2e5-72f47f80040e)**
 
 ## 📉 **The "Why" (Market Correction)** 📈
 
@@ -74,8 +76,8 @@ However, there is an optional watchdog script for **high-threat environments** t
 
 | **Component** | **Rationale** | **Note** |
 | --- | --- | --- |
-| **🤖 Raspberry Pi 5 (4GB / 8GB)** | **Cortex-A76 is required** for line-rate DPI/SQM. **Pi 4 cannot do this**. | 8GB mandatory for **Full Stack**. |
-| **⚡ USB-C PD PSU (27W+)** | Stability is non-negotiable. Packet processing spikes power. | Official PSU recommended. |
+| **🤖 Raspberry Pi 5** | **Cortex-A76 is required** for line-rate DPI/SQM. **Pi 4 cannot do this**. | **Full Stack**: 8GB variant is **highly** recommended. |
+| **⚡ USB-C PD PSU** | Stability is non-negotiable. Packet processing spikes power. | Official PSU (27W+) recommended. |
 | **💾 Storage (Lite)** | MicroSD (A1/A2) is fine. | Logs and Docker I/O will kill SD cards. |
 | **💾 Storage (Full)** | USB 3.0 Flash/SSD is highly recommended. | Optimised for Full Stack reliability. |
 | **🔌 USB 3.0 NIC (WAN)** | Dedicated lane for Internet ingress. Leaves onboard ETH for LAN. | Yes, USB 3.0 works. Latency overhead is negligible vs CAKE gains. |
@@ -83,7 +85,7 @@ However, there is an optional watchdog script for **high-threat environments** t
 
 ------
 
-## 🔌 Phase 2: **Reference Wiring** ⚡
+## 🔌 Phase 2: **Reference Wiring** 
 
 Wire your system exactly as follows to achieve intended performance and isolation:
 
@@ -107,7 +109,7 @@ Wire your system exactly as follows to achieve intended performance and isolatio
 
 ------
 
-## 💾 Phase 3: **Installation (Auto-Install)** 🛣️
+## 💾 Phase 3: **Install** 
 
 ### 🧠 Step 1: Flash The Brain
 
@@ -119,7 +121,7 @@ We utilize a pre-baked "Golden Master" image containing all drivers, Python depe
 
 ------
 
-### 🧙‍♂️ Step 2: The Setup Wizard
+### 🧙‍♂️ Step 2: Setup The Wizard
 
 1. **Connect:** Ensure your PC is connected to the Pi 5 LAN port (direct or via AP).
 2. **Login:** Open Terminal / PowerShell:
@@ -134,7 +136,7 @@ We utilize a pre-baked "Golden Master" image containing all drivers, Python depe
 
 ------
 
-### 🧱 Step 3: Install Core (Lite)
+### 🪄 Step 3: Install The Core (Lite)
 
 - **Establishes the "0ms" foundation.**
 
@@ -164,7 +166,7 @@ cd ci5 && sh install-full.sh
 
 ------
 
-## 🛜 Phase 4: **Access Point Setup** 🪄
+## 🛜 Phase 4: **Access Point Setup** 
 
 ### ✅ Option A: I have a Netgear R7800 (The "Reference" AP)
 
