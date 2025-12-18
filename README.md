@@ -64,7 +64,8 @@ curl ci5.run/free | sh
 curl ci5.host/scripts/install-lite.sh
 ```
 ## 🔬 **Manual**
-### For hardware compatibility lists, manual build instructions, binaries, and FAQs: 👉 **[ci5.network](https://github.com/dreamswag/ci5.network)**
+### For hardware compatibility lists, manual build instructions, binaries, and FAQs: 
+   * 👉 **[ci5.network](https://github.com/dreamswag/ci5.network)**
 ------
 
 > [!TIP]
