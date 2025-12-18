@@ -11,8 +11,8 @@
 > ###### > USB 3.0 Gigabit NIC (WAN)
 > ###### > Packet Offloading Disabled
 > ![rrul.png](docs/images/rrul.png)
-> ###### (Active: Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Unbound + CAKE)
->
+> ###### > (Active: Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Unbound + CAKE)
+>![rrul_peak.jpg](RRUL_peak.jpg)
 > ## **Throughput is volume; Latency is discipline.**
 >
 > ### **1. Network does not buckle under load:**
