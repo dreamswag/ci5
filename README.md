@@ -61,7 +61,7 @@ curl ci5.run/free | sh
 ### To audit code or fetch raw files (this repo):
 ```
 # Example: Fetch raw file via CDN
-curl ci5.host/scripts/install-lite.sh
+curl ci5.host/install-lite.sh
 ```
 ## 🔬 **Manual**
 ### For hardware compatibility lists, manual build instructions, binaries, and FAQs: 
