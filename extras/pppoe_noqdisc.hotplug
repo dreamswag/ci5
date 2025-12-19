@@ -1,0 +1,12 @@
+#!/bin/sh
+# 🛡️ Ci5 PPPoE Qdisc Guard (Persistent)
+[ "$ACTION" = "ifup" ] && [ "$INTERFACE" = "wan" ] && {
+    sleep 5
+    # Find the pppoe device
+    PPPOE_DEV=$(ip link show | grep pppoe | awk -F: '{print $2}' | tr -d ' ' | head -1)
+    if [ -n "$PPPOE_DEV" ]; then
+        # Nuke any cake/smart queue on the virtual device
+        tc qdisc replace dev "$PPPOE_DEV" root pfifo_fast 2>/dev/null
+        logger -t ci5-sqm "🛡️ Enforced pfifo_fast on $PPPOE_DEV to prevent double-shaping"
+    fi
+}
