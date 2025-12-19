@@ -1,15 +1,6 @@
 version: '3.8'
 services:
-  redis:
-    image: redis:7.2-bookworm
-    container_name: redis
-    restart: unless-stopped
-    command: redis-server --save 3600 1 --save 300 10000 --ignore-warnings ARM64-COW-BUG
-    network_mode: bridge
-    ports: ["127.0.0.1:6379:6379"]
-    volumes: [redis_data:/data]
-    sysctls: [net.core.somaxconn=1024]
-
+  # --- CORE (Always On) ---
   adguardhome:
     image: adguard/adguardhome:latest
     container_name: adguardhome
@@ -20,47 +11,59 @@ services:
       - ./adguard/work:/opt/adguardhome/work
       - ./adguard/conf:/opt/adguardhome/conf
 
+  unbound:
+    image: mvance/unbound:latest
+    container_name: unbound
+    restart: unless-stopped
+    network_mode: "host"
+    cap_add: [NET_ADMIN]
+    volumes:
+      # Map the symlink target so we can swap configs live
+      - ../configs/unbound:/opt/unbound/etc/unbound/
+
+  # --- FULL (Enabled via --profile full) ---
+  redis:
+    image: redis:7.2-bookworm
+    container_name: redis
+    restart: unless-stopped
+    network_mode: bridge
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: [redis_data:/data]
+    sysctls: [net.core.somaxconn=1024]
+    profiles: ["full"]
+
   ntopng:
     image: ntop/ntopng_arm64.dev:latest
     container_name: ntopng
     restart: unless-stopped
     network_mode: "host"
     depends_on: [redis]
-    environment: [NTOPNG_REDIS_HOST=127.0.0.1]
-    command:
-      - --community
-      - --redis=127.0.0.1:6379
-      - --http-port=127.0.0.1:3001
-      - --dns-mode=1
-      - --interface=eth1
-      - --interface=eth0
-      - -m=192.168.99.0/24,10.10.10.0/24,10.10.20.0/24,10.10.30.0/24,10.10.40.0/24,172.18.0.0/24
+    profiles: ["full"]
+    command: ["--community", "--redis=127.0.0.1:6379", "--interface=eth0"]
     volumes:
       - /opt/ci5-docker/config/ntopng:/etc/ntopng
-      - /opt/ci5-docker/data/ntopng:/var/lib/ntopng
-      - /tmp/dhcp.leases:/tmp/dhcp.leases:ro
+      - /var/lib/ntopng:/var/lib/ntopng
 
   suricata:
     image: jasonish/suricata:latest
     container_name: suricata
     restart: unless-stopped
     network_mode: "host"
+    profiles: ["full"]
     cap_add: [NET_ADMIN, NET_RAW, SYS_NICE]
-    command: -i pppoe-wan -v
+    command: -i br-lan -v
     volumes:
       - ./suricata:/var/log/suricata
-      - /opt/ci5-docker/config/suricata:/etc/suricata
 
   crowdsec:
     image: crowdsecurity/crowdsec
     container_name: crowdsec
     restart: unless-stopped
     network_mode: bridge
-    ports: ["127.0.0.1:8081:8080"]
-    environment: [COLLECTIONS=crowdsecurity/linux crowdsecurity/sshd crowdsecurity/http-cve]
+    profiles: ["full"]
+    environment: [COLLECTIONS=crowdsecurity/linux crowdsecurity/sshd]
     volumes:
       - ./crowdsec/config:/etc/crowdsec
-      - ./crowdsec/data:/var/lib/crowdsec/data
       - ./suricata:/var/log/suricata:ro
 
 volumes:

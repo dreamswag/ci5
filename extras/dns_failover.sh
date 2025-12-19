@@ -1,86 +1,52 @@
 #!/bin/sh
-# 🛡️ Ci5 DNS Failover Watchdog v7.4-RC-1
-# Logic: AdGuard (53) -> Unbound (5335). If AdGuard dies, Unbound takes 53.
+# 🛡️ Ci5 DNS Failover (Docker Edition)
+# Usage: ./dns_failover.sh [init|watch]
 
-ADGUARD_CONTAINER="adguard"
-UNBOUND_CFG="unbound.ub_main"
-CHECK_DOMAIN="google.com"
-MAX_FAILURES=3
-CHECK_INTERVAL=10
-RECOVERY_INTERVAL=60
+CONFIG_DIR="/opt/ci5/configs/unbound"
+LINK="$CONFIG_DIR/unbound.conf"
+PRIM="$CONFIG_DIR/unbound.conf.primary"
+FAIL="$CONFIG_DIR/unbound.conf.failover"
 
-FAIL_COUNT=0
-MODE="PRIMARY" # PRIMARY (AdGuard) or FAILOVER (Unbound)
+if [ "$1" = "init" ]; then
+    # Create templates if missing
+    if [ ! -f "$PRIM" ]; then cp "$LINK" "$PRIM"; fi
+    cp "$PRIM" "$FAIL"
+    sed -i 's/port: 5335/port: 53/g' "$FAIL"
+    exit 0
+fi
 
-log() { logger -t ci5-dns-watchdog "$1"; }
-
-# Test DNS resolution on specific IP/Port
-test_dns() {
-    # -W 2 (wait 2s), -p (port)
-    nslookup -port=$2 $CHECK_DOMAIN $1 >/dev/null 2>&1
-    return $?
-}
-
-switch_to_failover() {
-    log "🚨 AdGuard Failed. Switching to Unbound on Port 53 (Failover Mode)"
-    # 1. Move Unbound to 53
-    uci set ${UNBOUND_CFG}.listen_port='53'
-    uci set ${UNBOUND_CFG}.localservice='0'
-    uci commit unbound
-    /etc/init.d/unbound restart
-    
-    # 2. Stop AdGuard to prevent port bind conflicts
-    docker stop $ADGUARD_CONTAINER >/dev/null 2>&1
-    
-    MODE="FAILOVER"
-    FAIL_COUNT=0
-}
-
-switch_to_primary() {
-    log "♻️ Attempting Recovery: Restoring AdGuard..."
-    # 1. Move Unbound back to 5335
-    uci set ${UNBOUND_CFG}.listen_port='5335'
-    uci set ${UNBOUND_CFG}.localservice='1'
-    uci commit unbound
-    /etc/init.d/unbound restart
-    
-    # 2. Start AdGuard
-    docker start $ADGUARD_CONTAINER
-    
-    # 3. Grace period for AdGuard to load blocklists
-    sleep 15
-    
-    # 4. Verify
-    if test_dns "127.0.0.1" "53"; then
-        log "✅ AdGuard is healthy. Primary mode restored."
-        MODE="PRIMARY"
-        FAIL_COUNT=0
-    else
-        log "❌ AdGuard failed to recover. Reverting to Failover."
-        switch_to_failover
-    fi
-}
-
-log "🚀 Watchdog Started. Initial Grace Period (10s)..."
-sleep 10
+log() { logger -t ci5-dns "Watchdog: $1"; }
+test_dns() { nslookup -port=$1 google.com 127.0.0.1 >/dev/null 2>&1; return $?; }
 
 while true; do
-    if [ "$MODE" = "PRIMARY" ]; then
-        # Check if AdGuard is resolving
-        if test_dns "127.0.0.1" "53"; then
-            FAIL_COUNT=0
-        else
-            FAIL_COUNT=$((FAIL_COUNT + 1))
-            if [ "$FAIL_COUNT" -ge "$MAX_FAILURES" ]; then
-                switch_to_failover
-            fi
+    # Check if AdGuard container is running
+    if [ "$(docker inspect -f '{{.State.Running}}' adguardhome 2>/dev/null)" = "true" ]; then
+        # Check if Primary config is active
+        if [ "$(readlink -f $LINK)" != "$PRIM" ]; then
+            log "Restoring Primary Config..."
+            ln -sf "$PRIM" "$LINK"
+            docker restart unbound
         fi
-        sleep $CHECK_INTERVAL
         
-    elif [ "$MODE" = "FAILOVER" ]; then
-        # We are in failover. Internet works via Unbound :53.
-        # Periodically try to recover.
-        sleep $RECOVERY_INTERVAL
-        switch_to_primary
+        # Test AdGuard (Port 53)
+        if ! test_dns "53"; then
+            FAIL_COUNT=$((FAIL_COUNT+1))
+            if [ $FAIL_COUNT -ge 3 ]; then
+                log "AdGuard Dead. Failing over to Unbound on Port 53..."
+                docker stop adguardhome
+                ln -sf "$FAIL" "$LINK"
+                docker restart unbound
+            fi
+        else
+            FAIL_COUNT=0
+        fi
+    else
+        # AdGuard stopped/crashed - Try to recover every 60s
+        sleep 60
+        log "Attempting Recovery..."
+        ln -sf "$PRIM" "$LINK"
+        docker restart unbound
+        docker start adguardhome
     fi
+    sleep 10
 done
