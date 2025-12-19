@@ -1,96 +1,99 @@
-#!/bin/bash
-# ci5: The Bufferbloat Slayer (Full Install)
+#!/bin/sh
+# 🏰 Ci5 Unified Installer (v7.4-RC-1:Metamorphosis)
+# Supports: Raspberry Pi OS (Implant Mode) & OpenWrt (Native Mode)
 
-Red='\033[0;31m'
-Green='\033[0;32m'
-BGreen='\033[1;32m'
-Color_Off='\033[0m'
+# Load Config
+[ -f "ci5.config" ] && . ./ci5.config
+[ -f "/etc/os-release" ] && . /etc/os-release
 
-echo -e "${BGreen}>> ci5: INITIALIZING FULL INSTALLATION...${Color_Off}"
-
-# --- RESILIENCE MATRIX ---
-# 1. Primary:   ci5.run (Cloudflare CDN) - Speed.
-# 2. Secondary: GitHub Raw (Microsoft)   - Auditability.
-# 3. Tertiary:  IPFS/ENS (Decentralized) - Permanence.
-safe_curl() {
-    local output="$1"
-    local primary="$2"
-    local backup="$3"
-    
-    echo -e "${Green}>> Fetching asset...${Color_Off}"
-    
-    # Try Primary
-    if curl -sL --fail --connect-timeout 5 "$primary" -o "$output"; then return 0; fi
-    echo -e "${Red}!! Primary Uplink Down. Engaging Backup...${Color_Off}"
-    
-    # Try Secondary
-    if curl -sL --fail --connect-timeout 5 "$backup" -o "$output"; then return 0; fi
-    
-    echo -e "${Red}!! Network Collapse. Aborting.${Color_Off}"
-    return 1
-}
-
-# 1. System Update
-echo -e "${Green}>> Updating system dependencies...${Color_Off}"
-apt-get update && apt-get install -y curl git ethtool jq ca-certificates gnupg lsb-release bridge-utils dnsutils
-
-# 2. Network Config
-echo -e "${Green}>> Configuring Network Bridge...${Color_Off}"
-if [ -f /etc/dhcpcd.conf ]; then
-    cp /etc/dhcpcd.conf /etc/dhcpcd.conf.bak
-    echo "interface eth0" >> /etc/dhcpcd.conf
-    echo "fallback static_eth0" >> /etc/dhcpcd.conf
+# Detect Mode
+MODE="implant"
+if command -v opkg >/dev/null; then
+    MODE="native"
 fi
 
-# 3. Kernel Tuning
-echo -e "${Green}>> Hardening Kernel (Sysctl)...${Color_Off}"
-cat <<EOF > /etc/sysctl.d/99-ci5-tuning.conf
-net.core.default_qdisc = cake
-net.ipv4.tcp_congestion_control = bbr
-net.ipv4.ip_forward = 1
-net.core.somaxconn = 65535
-net.core.netdev_max_backlog = 16384
-fs.file-max = 2097152
-EOF
-sysctl --system
+GREEN='\033[0;32m'; RED='\033[0;31m'; NC='\033[0m'
 
-# 4. Docker
-if ! command -v docker &> /dev/null; then
-    echo -e "${Green}>> Installing Docker...${Color_Off}"
+echo -e "${GREEN}=== Initiating Ci5 Install (Mode: ${MODE^^}) ===${NC}"
+
+# ─────────────────────────────────────────────────────────────
+# MODULE A: PACKAGE INSTALLATION
+# ─────────────────────────────────────────────────────────────
+echo "[*] Installing Dependencies..."
+if [ "$MODE" = "native" ]; then
+    # OPENWRT
+    opkg update
+    opkg install docker docker-compose dockerd luci-app-dockerman git-http curl
+elif [ "$MODE" = "implant" ]; then
+    # DEBIAN / PI OS
+    apt-get update
+    # Strip conflicting network managers
+    systemctl disable --now dhcpcd 2>/dev/null
+    systemctl disable --now NetworkManager 2>/dev/null
+    
+    # Install Engine & Tools
     curl -fsSL https://get.docker.com | sh
-    usermod -aG docker $USER
+    apt-get install -y nftables bridge-utils ethtool irqbalance
 fi
 
-# 5. Pull Stack (Resilient Fetch)
-echo -e "${Green}>> Pulling Docker Stack...${Color_Off}"
-mkdir -p /opt/ci5/docker
-safe_curl \
-    "/opt/ci5/docker/docker-compose.yml" \
-    "https://ci5.host/docker/docker-compose.yml" \
-    "https://raw.githubusercontent.com/dreamswag/ci5/main/docker/docker-compose.yml"
+# ─────────────────────────────────────────────────────────────
+# MODULE B: NETWORK CONFIGURATION
+# ─────────────────────────────────────────────────────────────
+echo "[*] Configuring Network Core..."
 
-# 6. Enable Services
-cd /opt/ci5/docker && docker compose pull
+if [ "$MODE" = "native" ]; then
+    # OPENWRT: Use UCI (Native)
+    # This configures the router PERMANENTLY via OpenWrt config system
+    uci set network.lan.ipaddr='192.168.99.1'
+    uci set network.lan.proto='static'
+    uci commit network
+    /etc/init.d/network restart
 
-# 7. Boot Scripts
-echo -e "${Green}>> Installing Boot Logic...${Color_Off}"
-cat <<EOF > /etc/rc.local
-#!/bin/bash
-/opt/ci5/scripts/network_init.sh
-/opt/ci5/scripts/firewall_init.sh
-/opt/ci5/scripts/sqm_init.sh
-exit 0
-EOF
-chmod +x /etc/rc.local
+elif [ "$MODE" = "implant" ]; then
+    # PI OS: The Implant (rc.local injection)
+    # We rely on configs/network_init.sh running at boot to override the OS
+    
+    echo "[*] Injecting Boot Scripts..."
+    
+    # 1. Enable IP Forwarding
+    echo "net.ipv4.ip_forward=1" > /etc/sysctl.d/99-ci5-routing.conf
+    
+    # 2. Setup rc.local hook
+    if ! grep -q "ci5/configs/network_init.sh" /etc/rc.local; then
+        sed -i -e '$i \/opt\/ci5\/configs\/network_init.sh\n' /etc/rc.local
+        sed -i -e '$i \/opt\/ci5\/configs\/firewall_init.sh\n' /etc/rc.local
+        chmod +x /etc/rc.local
+    fi
+    
+    # 3. Create Factory State (Offline Failsafe)
+    echo "[*] Creating Factory Snapshot..."
+    tar -czf /opt/ci5/factory_state.tar.gz -C /opt/ci5 .
+fi
 
-# 8. Proof-of-Life (Resilient Fetch)
-echo -e "${BGreen}>> Staging Proof-of-Life Protocol...${Color_Off}"
-safe_curl \
-    "/etc/profile.d/z99-ci5-handshake.sh" \
-    "https://ci5.run/handshake" \
-    "https://raw.githubusercontent.com/dreamswag/ci5.run/main/scripts/sovereign-handshake.sh"
-chmod +x /etc/profile.d/z99-ci5-handshake.sh
+# ─────────────────────────────────────────────────────────────
+# MODULE C: DOCKER STACK
+# ─────────────────────────────────────────────────────────────
+echo "[*] Deploying Docker Stack..."
 
-echo -e "${BGreen}>> INSTALLATION COMPLETE. REBOOT REQUIRED.${Color_Off}"
-read -p "Reboot now? [y/N] " -r
-if [[ "$REPLY" =~ ^([yY][eE][sS]|[yY])$ ]]; then reboot; fi
+# Configure Daemon (Force DNS to avoid loop)
+mkdir -p /etc/docker
+echo '{"dns": ["1.1.1.1"]}' > /etc/docker/daemon.json
+systemctl restart docker 2>/dev/null || /etc/init.d/dockerd restart
+
+# Deploy
+cd /opt/ci5/docker
+docker compose pull
+# Note: We do NOT 'up' yet. We wait for reboot so networking is correct.
+
+# ─────────────────────────────────────────────────────────────
+# FINALIZATION
+# ─────────────────────────────────────────────────────────────
+echo ""
+echo -e "${GREEN}=== INSTALLATION COMPLETE ===${NC}"
+echo "Mode: $MODE"
+echo "IP Address: 192.168.99.1 (After Reboot)"
+echo ""
+echo "ACTION REQUIRED:"
+echo "1. Unplug WAN from existing router."
+echo "2. Plug WAN directly into Modem/ONT."
+echo "3. Reboot."
