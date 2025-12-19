@@ -1,5 +1,5 @@
 # 📡 🛸 Raspberry-Ci5: The Net Correctional 💨 🛰️
-###### 📟 [ci5.run](https://ci5.run): curl ~ 📡 [ci5.host](https://github.com/dreamswag/ci5): core ~ 🔬 [ci5.network](https://ci5.network): cert
+###### 📟 [ci5.run](https://github.com/dreamswag/ci5.run): curl ~ 📡 [ci5.host](https://github.com/dreamswag/ci5): core ~ 🔬 [ci5.network](https://github.com/dreamswag/ci5.network): cert
 > [!NOTE]
 >
 > # **📊 Realtime Response Under Load (RRUL) 📊**
