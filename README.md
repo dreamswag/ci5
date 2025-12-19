@@ -27,7 +27,7 @@
 > ###### **[External Verification (Waveform)](https://www.waveform.com/tools/bufferbloat?test-id=bb0dc946-bb4e-4b63-a2e5-72f47f80040e)**
 ------
 
-## 📉 **The "Why" (Market Correction)** 📈
+## 📉 **"Why?" (Market Correction)** 📈
 
 Most routers are **Tier 1 Garbage** (ISP/Consumer) or **Tier 3 Overkill** ($600+ Enterprise/Vendor-Locked). 
 
@@ -40,7 +40,7 @@ Most routers are **Tier 1 Garbage** (ISP/Consumer) or **Tier 3 Overkill** ($600+
 
 ------
 
-## 🛡️ The Architecture – Hybrid Control Plane ⚔️
+## 🛡️ **Architecture – Hybrid Control Plane** ⚔️
 
 "**Docker-on-Router**" usually means the entire network loses connectivity as soon as Docker sneezes. 
 
