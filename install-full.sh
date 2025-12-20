@@ -1,99 +1,89 @@
-#!/bin/sh
-# 🏰 Ci5 Unified Installer (v7.4-RC-1:Metamorphosis)
-# Supports: Raspberry Pi OS (Implant Mode) & OpenWrt (Native Mode)
+#!/bin/bash
+# 🏰 Ci5 Unified Installer (v7.5: The Cork Registry)
+# Deploys Docker, Core Services, and Community Corks
 
-# Load Config
-[ -f "ci5.config" ] && . ./ci5.config
-[ -f "/etc/os-release" ] && . /etc/os-release
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 
-# Detect Mode
-MODE="implant"
-if command -v opkg >/dev/null; then
-    MODE="native"
-fi
-
-GREEN='\033[0;32m'; RED='\033[0;31m'; NC='\033[0m'
-
-echo -e "${GREEN}=== Initiating Ci5 Install (Mode: ${MODE^^}) ===${NC}"
+echo -e "${GREEN}Starting Ci5 Installation...${NC}"
 
 # ─────────────────────────────────────────────────────────────
-# MODULE A: PACKAGE INSTALLATION
+# MODULE A: PREREQUISITES
 # ─────────────────────────────────────────────────────────────
 echo "[*] Installing Dependencies..."
-if [ "$MODE" = "native" ]; then
-    # OPENWRT
-    opkg update
-    opkg install docker docker-compose dockerd luci-app-dockerman git-http curl
-elif [ "$MODE" = "implant" ]; then
-    # DEBIAN / PI OS
-    apt-get update
-    # Strip conflicting network managers
-    systemctl disable --now dhcpcd 2>/dev/null
-    systemctl disable --now NetworkManager 2>/dev/null
-    
-    # Install Engine & Tools
-    curl -fsSL https://get.docker.com | sh
-    apt-get install -y nftables bridge-utils ethtool irqbalance
+opkg update
+opkg install git-http curl ca-certificates parted losetup resize2fs
+
+# ─────────────────────────────────────────────────────────────
+# MODULE B: DOCKER ENGINE
+# ─────────────────────────────────────────────────────────────
+echo "[*] Checking Docker..."
+if ! command -v docker &> /dev/null; then
+    echo "    -> Installing Docker (dockerd)..."
+    opkg install dockerd docker-compose
+    # Enable and Start
+    /etc/init.d/dockerd enable
+    /etc/init.d/dockerd start
+    sleep 5
 fi
 
 # ─────────────────────────────────────────────────────────────
-# MODULE B: NETWORK CONFIGURATION
+# MODULE C: CORE STACK (AdGuard/Unbound)
 # ─────────────────────────────────────────────────────────────
-echo "[*] Configuring Network Core..."
+echo "[*] Deploying Core Stack..."
+cd /opt/ci5/docker
+# Ensure networks exist
+docker network create ci5_net 2>/dev/null
 
-if [ "$MODE" = "native" ]; then
-    # OPENWRT: Use UCI (Native)
-    # This configures the router PERMANENTLY via OpenWrt config system
-    uci set network.lan.ipaddr='192.168.99.1'
-    uci set network.lan.proto='static'
-    uci commit network
-    /etc/init.d/network restart
+# Launch Core
+docker compose up -d adguardhome unbound
+echo "    -> Core Services Active."
 
-elif [ "$MODE" = "implant" ]; then
-    # PI OS: The Implant (rc.local injection)
-    # We rely on configs/network_init.sh running at boot to override the OS
+# ─────────────────────────────────────────────────────────────
+# MODULE D: CORK INJECTION (The App Store)
+# ─────────────────────────────────────────────────────────────
+echo "[*] Uncorking Registry Modules..."
+
+# 1. Defaults (If no Soul injection)
+DEFAULT_CORKS="dreamswag/cork-ntopng" 
+
+# 2. Load "Soul" List
+if [ -f /etc/ci5_corks ]; then
+    USER_CORKS=$(cat /etc/ci5_corks)
+    echo -e "    -> Found User Loadout: ${YELLOW}$USER_CORKS${NC}"
+else
+    USER_CORKS="$DEFAULT_CORKS"
+fi
+
+# 3. Fetch & Deploy Loop
+mkdir -p /opt/ci5/corks
+for REPO in $USER_CORKS; do
+    NAME=$(basename "$REPO")
+    echo "    -> Fetching Cork: $NAME"
     
-    echo "[*] Injecting Boot Scripts..."
-    
-    # 1. Enable IP Forwarding
-    echo "net.ipv4.ip_forward=1" > /etc/sysctl.d/99-ci5-routing.conf
-    
-    # 2. Setup rc.local hook
-    if ! grep -q "ci5/configs/network_init.sh" /etc/rc.local; then
-        sed -i -e '$i \/opt\/ci5\/configs\/network_init.sh\n' /etc/rc.local
-        sed -i -e '$i \/opt\/ci5\/configs\/firewall_init.sh\n' /etc/rc.local
-        chmod +x /etc/rc.local
+    # Clone (Depth 1 for speed)
+    if [ -d "/opt/ci5/corks/$NAME" ]; then
+        cd "/opt/ci5/corks/$NAME" && git pull
+    else
+        git clone --depth 1 "https://github.com/$REPO.git" "/opt/ci5/corks/$NAME" 2>/dev/null
     fi
     
-    # 3. Create Factory State (Offline Failsafe)
-    echo "[*] Creating Factory Snapshot..."
-    tar -czf /opt/ci5/factory_state.tar.gz -C /opt/ci5 .
-fi
+    if [ $? -eq 0 ]; then
+        # Check for Docker vs Script
+        if [ -f "/opt/ci5/corks/$NAME/docker-compose.yml" ]; then
+            echo "       [Docker] Starting $NAME..."
+            cd "/opt/ci5/corks/$NAME" && docker compose up -d
+        elif [ -f "/opt/ci5/corks/$NAME/init.sh" ]; then
+            echo "       [Script] Running init for $NAME..."
+            bash "/opt/ci5/corks/$NAME/init.sh"
+        fi
+    else
+        echo -e "       ${RED}[ERROR] Failed to download $REPO${NC}"
+    fi
+done
 
 # ─────────────────────────────────────────────────────────────
-# MODULE C: DOCKER STACK
+# MODULE E: FINALIZATION
 # ─────────────────────────────────────────────────────────────
-echo "[*] Deploying Docker Stack..."
-
-# Configure Daemon (Force DNS to avoid loop)
-mkdir -p /etc/docker
-echo '{"dns": ["1.1.1.1"]}' > /etc/docker/daemon.json
-systemctl restart docker 2>/dev/null || /etc/init.d/dockerd restart
-
-# Deploy
-cd /opt/ci5/docker
-docker compose pull
-# Note: We do NOT 'up' yet. We wait for reboot so networking is correct.
-
-# ─────────────────────────────────────────────────────────────
-# FINALIZATION
-# ─────────────────────────────────────────────────────────────
-echo ""
-echo -e "${GREEN}=== INSTALLATION COMPLETE ===${NC}"
-echo "Mode: $MODE"
-echo "IP Address: 192.168.99.1 (After Reboot)"
-echo ""
-echo "ACTION REQUIRED:"
-echo "1. Unplug WAN from existing router."
-echo "2. Plug WAN directly into Modem/ONT."
-echo "3. Reboot."
+echo "[*] Installation Complete."
+echo "    Access Dashboard at: http://192.168.99.1"
