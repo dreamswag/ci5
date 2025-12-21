@@ -75,7 +75,7 @@ curl ci5.host/install-lite.sh
 > [!TIP]
 > ```
 > "Fuck all this Dream Machine dick-measuring contest. We all gon be dead in 100 years.
-> Let the kids have the unmaintained Raspberry-Ci5 auto-install scripts w/ NIDs & 0ms bufferbloat"
+> Let the kids have the Raspberry-Ci5 auto-install scripts w/ NIDs, Corks & 0ms bufferbloat"
 > ```
 > ------
 > ###### > 🌪️ **UDM Pro Funnel:** 🎪 jape.eth 🃏
