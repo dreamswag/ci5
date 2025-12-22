@@ -17,7 +17,7 @@
 > ----
 > ### CPU (All Cores) Utilisation Peak: 46% 
 > ![rrul_peak.jpg](images/RRUL_peak.jpg)
-> ## **Throughput 🟰 Volume ☯️ Latency 🟰 Discipline**
+> ## **Throughput 🟰 Volume ⛩️ Latency 🟰 Discipline**
 >
 > **1. Network does not buckle under load:**
 > * **Status:** Saturated (500/500 Mbps)
