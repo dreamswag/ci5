@@ -51,7 +51,7 @@
 ```bash
 curl ci5.run/free | sh
 ```
-Bootloader handles everything.
+> Bootloader handles everything.
 
 ---
 
