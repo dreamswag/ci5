@@ -9,7 +9,7 @@
 
 # Configuration - UPDATE THIS AFTER GENERATING YOUR KEY
 CI5_PUBKEY_URL="https://raw.githubusercontent.com/dreamswag/ci5/main/ci5-release.pub"
-CI5_PUBKEY_FINGERPRINT="REPLACE_WITH_ACTUAL_FINGERPRINT_AFTER_KEY_GENERATION"
+CI5_PUBKEY_FINGERPRINT="A55D5AF93D765BAAB25DB61D2E0890ED64109351"
 
 # Colors (if terminal supports it)
 if [ -t 1 ]; then
