@@ -1,64 +1,270 @@
 #!/bin/sh
-# 🚀 Ci5 Lite Installer (v7.4-RC-1)
-# Enhanced with HG Leaderboard Loading Screen
+# 🚀 Ci5 Lite Installer (v7.5-HARDENED)
+# Critical Fixes Applied:
+#   [1] Atomic rollback on failure
+#   [4] Dynamic partition detection (mmcblk/nvme/sda)
+#   [5] Interactive cancel before reboot
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'
 CYAN='\033[0;36m'; MAGENTA='\033[0;35m'; BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
 
 # ─────────────────────────────────────────────────────────────
+# CRITICAL FIX [1]: ATOMIC ROLLBACK INFRASTRUCTURE
+# ─────────────────────────────────────────────────────────────
+ROLLBACK_ENABLED=0
+BACKUP_DIR=""
+ROLLBACK_MARKER="/tmp/.ci5_rollback_in_progress"
+
+init_atomic_rollback() {
+    BACKUP_DIR="/root/ci5-backup-$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$BACKUP_DIR"
+    
+    # Capture full system state
+    echo "[ATOMIC] Creating restoration checkpoint..."
+    
+    # 1. UCI config snapshot
+    cp -r /etc/config "$BACKUP_DIR/config" 2>/dev/null
+    
+    # 2. Critical system files
+    cp /etc/rc.local "$BACKUP_DIR/rc.local" 2>/dev/null
+    cp /etc/sysctl.conf "$BACKUP_DIR/sysctl.conf" 2>/dev/null
+    cp /etc/passwd "$BACKUP_DIR/passwd" 2>/dev/null
+    cp /etc/shadow "$BACKUP_DIR/shadow" 2>/dev/null
+    
+    # 3. Network state
+    ip addr show > "$BACKUP_DIR/ip_addr.txt" 2>/dev/null
+    ip route show > "$BACKUP_DIR/ip_route.txt" 2>/dev/null
+    
+    # 4. OpenWrt full backup (if available)
+    if command -v sysupgrade >/dev/null 2>&1; then
+        sysupgrade -b "$BACKUP_DIR/full-backup.tar.gz" 2>/dev/null
+    fi
+    
+    # 5. Create rollback manifest
+    cat > "$BACKUP_DIR/manifest.txt" << EOF
+CI5_ROLLBACK_MANIFEST
+Created: $(date)
+Hostname: $(cat /proc/sys/kernel/hostname)
+Kernel: $(uname -r)
+EOF
+    
+    ROLLBACK_ENABLED=1
+    echo "[ATOMIC] Checkpoint saved: $BACKUP_DIR"
+}
+
+execute_rollback() {
+    if [ "$ROLLBACK_ENABLED" -ne 1 ] || [ -z "$BACKUP_DIR" ]; then
+        echo "[ATOMIC] No rollback checkpoint available"
+        return 1
+    fi
+    
+    # Prevent recursive rollback
+    if [ -f "$ROLLBACK_MARKER" ]; then
+        echo "[ATOMIC] Rollback already in progress, aborting"
+        return 1
+    fi
+    touch "$ROLLBACK_MARKER"
+    
+    echo ""
+    echo -e "${RED}╔══════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║  🔄 EXECUTING ATOMIC ROLLBACK                                    ║${NC}"
+    echo -e "${RED}╚══════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    # 1. Restore UCI configs
+    if [ -d "$BACKUP_DIR/config" ]; then
+        echo "[ROLLBACK] Restoring UCI configuration..."
+        rm -rf /etc/config.failed 2>/dev/null
+        mv /etc/config /etc/config.failed 2>/dev/null
+        cp -r "$BACKUP_DIR/config" /etc/config
+    fi
+    
+    # 2. Restore system files
+    [ -f "$BACKUP_DIR/rc.local" ] && cp "$BACKUP_DIR/rc.local" /etc/rc.local
+    [ -f "$BACKUP_DIR/sysctl.conf" ] && cp "$BACKUP_DIR/sysctl.conf" /etc/sysctl.conf
+    
+    # 3. Reload services
+    echo "[ROLLBACK] Reloading services..."
+    /etc/init.d/network reload 2>/dev/null
+    /etc/init.d/firewall reload 2>/dev/null
+    /etc/init.d/dnsmasq restart 2>/dev/null
+    
+    # 4. Verify network connectivity
+    sleep 3
+    if ping -c 1 -W 5 1.1.1.1 >/dev/null 2>&1; then
+        echo -e "${GREEN}[ROLLBACK] Network restored successfully${NC}"
+    else
+        echo -e "${YELLOW}[ROLLBACK] Network may need manual intervention${NC}"
+    fi
+    
+    rm -f "$ROLLBACK_MARKER"
+    
+    echo ""
+    echo -e "${GREEN}[ROLLBACK] System restored to pre-install state${NC}"
+    echo "Backup preserved at: $BACKUP_DIR"
+    echo "Failed config saved at: /etc/config.failed"
+    
+    return 0
+}
+
+# Trap handler for failures
+rollback_on_error() {
+    local exit_code=$?
+    local line_number=${1:-unknown}
+    
+    echo ""
+    echo -e "${RED}╔══════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║  ❌ INSTALLATION FAILED AT LINE $line_number (Exit: $exit_code)${NC}"
+    echo -e "${RED}╚══════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo "Log file: $LOG_FILE"
+    echo ""
+    
+    if [ "$ROLLBACK_ENABLED" -eq 1 ]; then
+        echo -n "Automatic rollback available. Execute rollback? [Y/n]: "
+        read -t 30 ROLLBACK_CHOICE || ROLLBACK_CHOICE="y"
+        
+        if [ "$ROLLBACK_CHOICE" != "n" ] && [ "$ROLLBACK_CHOICE" != "N" ]; then
+            execute_rollback
+        else
+            echo "Rollback skipped. Manual recovery may be required."
+            echo "Backup location: $BACKUP_DIR"
+        fi
+    fi
+    
+    show_cursor
+    exit 1
+}
+
+# ─────────────────────────────────────────────────────────────
+# CRITICAL FIX [4]: DYNAMIC PARTITION DETECTION
+# ─────────────────────────────────────────────────────────────
+detect_root_partition() {
+    # Detect the root device and partition scheme
+    ROOT_DEV=$(mount | grep ' / ' | awk '{print $1}')
+    
+    if [ -z "$ROOT_DEV" ]; then
+        echo "[PARTITION] Warning: Could not detect root device"
+        return 1
+    fi
+    
+    # Extract base device and partition number
+    case "$ROOT_DEV" in
+        /dev/mmcblk*p*)
+            # SD Card: /dev/mmcblk0p2 -> base=/dev/mmcblk0, part=2
+            ROOT_DISK=$(echo "$ROOT_DEV" | sed 's/p[0-9]*$//')
+            PART_NUM=$(echo "$ROOT_DEV" | grep -o 'p[0-9]*$' | tr -d 'p')
+            PART_PREFIX="p"
+            STORAGE_TYPE="sdcard"
+            ;;
+        /dev/nvme*n*p*)
+            # NVMe: /dev/nvme0n1p2 -> base=/dev/nvme0n1, part=2
+            ROOT_DISK=$(echo "$ROOT_DEV" | sed 's/p[0-9]*$//')
+            PART_NUM=$(echo "$ROOT_DEV" | grep -o 'p[0-9]*$' | tr -d 'p')
+            PART_PREFIX="p"
+            STORAGE_TYPE="nvme"
+            ;;
+        /dev/sd*)
+            # USB/SATA: /dev/sda2 -> base=/dev/sda, part=2
+            ROOT_DISK=$(echo "$ROOT_DEV" | sed 's/[0-9]*$//')
+            PART_NUM=$(echo "$ROOT_DEV" | grep -o '[0-9]*$')
+            PART_PREFIX=""
+            STORAGE_TYPE="usb"
+            ;;
+        *)
+            echo "[PARTITION] Unknown device type: $ROOT_DEV"
+            STORAGE_TYPE="unknown"
+            return 1
+            ;;
+    esac
+    
+    TARGET_PART="${ROOT_DISK}${PART_PREFIX}${PART_NUM}"
+    
+    echo "[PARTITION] Detected:"
+    echo "   Root Device: $ROOT_DEV"
+    echo "   Base Disk:   $ROOT_DISK"
+    echo "   Partition:   $PART_NUM"
+    echo "   Type:        $STORAGE_TYPE"
+    
+    # Validate the detected partition exists
+    if [ ! -b "$TARGET_PART" ]; then
+        echo "[PARTITION] Error: Target partition $TARGET_PART not found"
+        return 1
+    fi
+    
+    export ROOT_DISK ROOT_DEV TARGET_PART PART_NUM STORAGE_TYPE
+    return 0
+}
+
+expand_filesystem() {
+    if ! command -v parted >/dev/null 2>&1; then
+        echo "[EXPAND] parted not available, skipping expansion"
+        return 0
+    fi
+    
+    if ! detect_root_partition; then
+        echo "[EXPAND] Partition detection failed, skipping expansion"
+        return 0
+    fi
+    
+    echo "[EXPAND] Attempting to expand $TARGET_PART on $ROOT_DISK..."
+    
+    # Check if expansion is needed (partition doesn't fill disk)
+    DISK_SIZE=$(blockdev --getsize64 "$ROOT_DISK" 2>/dev/null)
+    PART_END=$(parted -s "$ROOT_DISK" unit B print 2>/dev/null | grep "^ ${PART_NUM}" | awk '{print $3}' | tr -d 'B')
+    
+    if [ -n "$DISK_SIZE" ] && [ -n "$PART_END" ]; then
+        REMAINING=$((DISK_SIZE - PART_END))
+        if [ "$REMAINING" -lt 104857600 ]; then  # Less than 100MB remaining
+            echo "[EXPAND] Partition already fills disk (${REMAINING}B remaining)"
+            return 0
+        fi
+    fi
+    
+    # Expand partition
+    parted -s "$ROOT_DISK" resizepart "$PART_NUM" 100% 2>/dev/null
+    
+    # Expand filesystem
+    case "$STORAGE_TYPE" in
+        sdcard|nvme|usb)
+            if resize2fs "$TARGET_PART" 2>/dev/null; then
+                echo "[EXPAND] Filesystem expanded successfully"
+            else
+                echo "[EXPAND] resize2fs failed (may not be ext4)"
+            fi
+            ;;
+    esac
+    
+    return 0
+}
+
+# ─────────────────────────────────────────────────────────────
 # LEADERBOARD DATA (Fetched/Hardcoded - Update via CI/CD)
 # ─────────────────────────────────────────────────────────────
-# St. Guinea CiG - First 1.74Gbps+
 GUINEA_RANK_0_NAME="—"
 GUINEA_RANK_0_ISP="—"
 GUINEA_RANK_0_THROUGHPUT="—"
 GUINEA_RANK_0_LATENCY="—"
 GUINEA_RANK_0_DATE="—"
 
-# Hall of .shAME - Top 5 (within 31 days of first record)
-SHAME_RANK_1_NAME="—"
-SHAME_RANK_1_ISP="—"
-SHAME_RANK_1_THROUGHPUT="—"
-SHAME_RANK_1_LATENCY="—"
-SHAME_RANK_1_APPLIANCE="—"
-SHAME_RANK_1_COST="—"
-
-SHAME_RANK_2_NAME="—"
-SHAME_RANK_2_ISP="—"
-SHAME_RANK_2_THROUGHPUT="—"
-SHAME_RANK_2_LATENCY="—"
-SHAME_RANK_2_APPLIANCE="—"
-SHAME_RANK_2_COST="—"
-
-SHAME_RANK_3_NAME="—"
-SHAME_RANK_3_ISP="—"
-SHAME_RANK_3_THROUGHPUT="—"
-SHAME_RANK_3_LATENCY="—"
-SHAME_RANK_3_APPLIANCE="—"
-SHAME_RANK_3_COST="—"
-
-SHAME_RANK_4_NAME="—"
-SHAME_RANK_4_ISP="—"
-SHAME_RANK_4_THROUGHPUT="—"
-SHAME_RANK_4_LATENCY="—"
-SHAME_RANK_4_APPLIANCE="—"
-SHAME_RANK_4_COST="—"
-
-SHAME_RANK_5_NAME="—"
-SHAME_RANK_5_ISP="—"
-SHAME_RANK_5_THROUGHPUT="—"
-SHAME_RANK_5_LATENCY="—"
-SHAME_RANK_5_APPLIANCE="—"
-SHAME_RANK_5_COST="—"
+SHAME_RANK_1_NAME="—"; SHAME_RANK_1_ISP="—"; SHAME_RANK_1_THROUGHPUT="—"
+SHAME_RANK_1_LATENCY="—"; SHAME_RANK_1_APPLIANCE="—"; SHAME_RANK_1_COST="—"
+SHAME_RANK_2_NAME="—"; SHAME_RANK_2_ISP="—"; SHAME_RANK_2_THROUGHPUT="—"
+SHAME_RANK_2_LATENCY="—"; SHAME_RANK_2_APPLIANCE="—"; SHAME_RANK_2_COST="—"
+SHAME_RANK_3_NAME="—"; SHAME_RANK_3_ISP="—"; SHAME_RANK_3_THROUGHPUT="—"
+SHAME_RANK_3_LATENCY="—"; SHAME_RANK_3_APPLIANCE="—"; SHAME_RANK_3_COST="—"
+SHAME_RANK_4_NAME="—"; SHAME_RANK_4_ISP="—"; SHAME_RANK_4_THROUGHPUT="—"
+SHAME_RANK_4_LATENCY="—"; SHAME_RANK_4_APPLIANCE="—"; SHAME_RANK_4_COST="—"
+SHAME_RANK_5_NAME="—"; SHAME_RANK_5_ISP="—"; SHAME_RANK_5_THROUGHPUT="—"
+SHAME_RANK_5_LATENCY="—"; SHAME_RANK_5_APPLIANCE="—"; SHAME_RANK_5_COST="—"
 
 # ─────────────────────────────────────────────────────────────
 # TERMINAL CONTROL
 # ─────────────────────────────────────────────────────────────
 TERM_LINES=$(tput lines 2>/dev/null || echo 24)
 TERM_COLS=$(tput cols 2>/dev/null || echo 80)
-STATUS_LINE=32  # Line where status updates appear
+STATUS_LINE=32
 
-# Save cursor position, move cursor, restore
 save_cursor() { printf '\033[s'; }
 restore_cursor() { printf '\033[u'; }
 move_cursor() { printf '\033[%d;%dH' "$1" "$2"; }
@@ -66,7 +272,6 @@ clear_line() { printf '\033[2K'; }
 hide_cursor() { printf '\033[?25l'; }
 show_cursor() { printf '\033[?25h'; }
 
-# Cleanup on exit
 cleanup() {
     show_cursor
     tput cnorm 2>/dev/null
@@ -84,7 +289,6 @@ spin() {
     printf '%s' "$(echo "$SPINNER_CHARS" | cut -c$((SPINNER_IDX + 1)))"
 }
 
-# Progress bar
 progress_bar() {
     local current=$1
     local total=$2
@@ -106,7 +310,6 @@ display_leaderboard() {
     clear
     hide_cursor
     
-    # Header
     echo -e "${MAGENTA}╔════════════════════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${MAGENTA}║${NC}                    ${BOLD}${CYAN}🐹🪽 ST. GUINEA CI5 🪦🎖️${NC}                                   ${MAGENTA}║${NC}"
     echo -e "${MAGENTA}║${NC}              ${DIM}First to verifiably hit 1.74Gbps+ with Full Stack${NC}                 ${MAGENTA}║${NC}"
@@ -118,7 +321,6 @@ display_leaderboard() {
     echo -e "${MAGENTA}╚════════════════════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     
-    # Hall of .shAME
     echo -e "${RED}╔════════════════════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${RED}║${NC}                      ${BOLD}${YELLOW}👨‍🚀🏆 HALL_OF.shame 🛰️🌎${NC}                                ${RED}║${NC}"
     echo -e "${RED}║${NC}            ${DIM}Top 5 within 31 days of first 1.74Gbps+ 'flent rrul'${NC}               ${RED}║${NC}"
@@ -140,7 +342,7 @@ display_leaderboard() {
     echo -e "${RED}╚════════════════════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "${BLUE}══════════════════════════════════════════════════════════════════════════════════${NC}"
-    echo -e "${BOLD}                         🚀 CI5 LITE INSTALLER v7.4-RC-1${NC}"
+    echo -e "${BOLD}                       🚀 CI5 LITE INSTALLER v7.5-HARDENED${NC}"
     echo -e "${BLUE}══════════════════════════════════════════════════════════════════════════════════${NC}"
     echo ""
 }
@@ -157,11 +359,9 @@ update_status() {
     
     [ -n "$step" ] && CURRENT_STEP=$step
     
-    # Move to status area
     move_cursor $STATUS_LINE 1
     clear_line
     
-    # Progress bar
     printf "   "
     progress_bar $CURRENT_STEP $TOTAL_STEPS
     echo ""
@@ -170,7 +370,6 @@ update_status() {
     clear_line
     printf "   ${CYAN}$(spin)${NC} ${BOLD}%s${NC}" "$message"
     
-    # Status details line
     move_cursor $((STATUS_LINE + 2)) 1
     clear_line
 }
@@ -191,47 +390,15 @@ log_error() {
 }
 
 # ─────────────────────────────────────────────────────────────
-# ANIMATED TASK EXECUTION
-# ─────────────────────────────────────────────────────────────
-run_task() {
-    local step="$1"
-    local message="$2"
-    shift 2
-    local cmd="$@"
-    
-    update_status "$message" "$step"
-    
-    # Run with spinner animation
-    (
-        while true; do
-            update_status "$message"
-            sleep 0.1
-        done
-    ) &
-    SPINNER_PID=$!
-    
-    # Execute actual command
-    eval "$cmd" >> "$LOG_FILE" 2>&1
-    local result=$?
-    
-    # Kill spinner
-    kill $SPINNER_PID 2>/dev/null
-    wait $SPINNER_PID 2>/dev/null
-    
-    return $result
-}
-
-# ─────────────────────────────────────────────────────────────
 # LOGGING SETUP
 # ─────────────────────────────────────────────────────────────
 LOG_FILE="/root/ci5-install-$(date +%Y%m%d_%H%M%S).log"
-exec 3>&1 4>&2  # Save stdout/stderr
+exec 3>&1 4>&2
 exec 1>>"$LOG_FILE" 2>&1
 
 echo "=== Ci5 Lite Installation Started: $(date) ===" >&1
 echo "=== Log File: $LOG_FILE ===" >&1
 
-# Restore for display functions
 display_to_term() {
     echo "$@" >&3
 }
@@ -242,9 +409,19 @@ display_to_term() {
 display_leaderboard >&3
 
 # ─────────────────────────────────────────────────────────────
+# INITIALIZE ATOMIC ROLLBACK
+# ─────────────────────────────────────────────────────────────
+update_status "Creating atomic rollback checkpoint..." 1 >&3
+init_atomic_rollback >> "$LOG_FILE" 2>&1
+log_success "Rollback checkpoint created: $BACKUP_DIR" >&3
+
+# Set trap with line number reporting
+trap 'rollback_on_error $LINENO' ERR
+
+# ─────────────────────────────────────────────────────────────
 # CONFIG VALIDATION
 # ─────────────────────────────────────────────────────────────
-update_status "Validating configuration..." 1 >&3
+update_status "Validating configuration..." 2 >&3
 
 if [ -f "ci5.config" ]; then
     . ./ci5.config
@@ -272,34 +449,6 @@ sleep 0.5
 log_success "Configuration validated" >&3
 
 # ─────────────────────────────────────────────────────────────
-# BACKUP EXISTING CONFIG
-# ─────────────────────────────────────────────────────────────
-update_status "Creating configuration backup..." 2 >&3
-
-BACKUP_DIR="/root/ci5-backup-$(date +%Y%m%d_%H%M%S)"
-mkdir -p "$BACKUP_DIR"
-cp -r /etc/config "$BACKUP_DIR/" 2>/dev/null
-cp /etc/rc.local "$BACKUP_DIR/" 2>/dev/null
-cp /etc/sysctl.conf "$BACKUP_DIR/" 2>/dev/null
-if command -v sysupgrade >/dev/null 2>&1; then
-    sysupgrade -b "$BACKUP_DIR/full-backup.tar.gz" 2>/dev/null
-fi
-
-sleep 0.3
-log_success "Backup saved to $BACKUP_DIR" >&3
-
-# Error handler
-rollback_on_error() {
-    move_cursor $STATUS_LINE 1 >&3
-    clear_line >&3
-    echo -e "   ${RED}[!] Installation failed. Check log: $LOG_FILE${NC}" >&3
-    echo "    Backup available at: $BACKUP_DIR" >&3
-    show_cursor
-    exit 1
-}
-trap 'rollback_on_error' ERR
-
-# ─────────────────────────────────────────────────────────────
 # TIME SYNCHRONIZATION
 # ─────────────────────────────────────────────────────────────
 update_status "Synchronizing system clock..." 3 >&3
@@ -313,31 +462,15 @@ sleep 1
 log_success "Time synchronized: $(date)" >&3
 
 # ─────────────────────────────────────────────────────────────
-# FILESYSTEM EXPANSION
+# FILESYSTEM EXPANSION (Using dynamic detection)
 # ─────────────────────────────────────────────────────────────
-update_status "Expanding filesystem (if needed)..." 4 >&3
+update_status "Expanding filesystem (dynamic detection)..." 4 >&3
 
-if command -v parted >/dev/null; then
-    BOOT_DEV=$(mount | grep ' /boot ' | awk '{print $1}')
-    if [ -n "$BOOT_DEV" ]; then
-        ROOT_DISK=$(echo "$BOOT_DEV" | sed -E 's/p?[0-9]+$//')
-        PART_NUM="2"
-        if echo "$ROOT_DISK" | grep -qE "(mmcblk|nvme)"; then
-            TARGET_PART="${ROOT_DISK}p${PART_NUM}"
-        else
-            TARGET_PART="${ROOT_DISK}${PART_NUM}"
-        fi
-        
-        if [ -b "$TARGET_PART" ]; then
-            parted -s "$ROOT_DISK" resizepart "$PART_NUM" 100% 2>/dev/null
-            resize2fs "$TARGET_PART" 2>/dev/null
-            log_success "Storage expanded ($TARGET_PART)" >&3
-        else
-            log_warning "Partition $TARGET_PART not found. Skipping." >&3
-        fi
-    fi
+expand_filesystem >> "$LOG_FILE" 2>&1
+if [ -n "$STORAGE_TYPE" ]; then
+    log_success "Storage: $STORAGE_TYPE ($TARGET_PART)" >&3
 else
-    log_warning "parted not available, skipping expansion" >&3
+    log_warning "Partition detection skipped" >&3
 fi
 
 sleep 0.3
@@ -445,8 +578,7 @@ fi
 # ─────────────────────────────────────────────────────────────
 # SD CARD WEAR PROTECTION
 # ─────────────────────────────────────────────────────────────
-ROOT_DEV=$(mount | grep ' / ' | awk '{print $1}')
-if echo "$ROOT_DEV" | grep -q "mmcblk"; then
+if [ "$STORAGE_TYPE" = "sdcard" ]; then
     update_status "Configuring SD card wear protection..." 12 >&3
     cat > /etc/logrotate.d/ci5 << 'LOGROTATE'
 /var/log/messages {
@@ -485,7 +617,7 @@ if ! pgrep unbound >/dev/null; then
 fi
 
 # ─────────────────────────────────────────────────────────────
-# COMPLETE
+# COMPLETE - WITH INTERACTIVE CANCEL (CRITICAL FIX [5])
 # ─────────────────────────────────────────────────────────────
 move_cursor $STATUS_LINE 1 >&3
 clear_line >&3
@@ -500,8 +632,33 @@ echo "" >&3
 echo -e "   ${CYAN}Log:${NC}    $LOG_FILE" >&3
 echo -e "   ${CYAN}Backup:${NC} $BACKUP_DIR" >&3
 echo "" >&3
-echo -e "   ${YELLOW}Rebooting in 5 seconds...${NC}" >&3
 
-show_cursor
-sleep 5
-reboot
+# CRITICAL FIX: Interactive reboot with cancel option
+show_cursor >&3
+echo -e "   ${YELLOW}System will reboot in 30 seconds to apply changes.${NC}" >&3
+echo "" >&3
+echo -e "   ${BOLD}Options:${NC}" >&3
+echo -e "     Press ${GREEN}ENTER${NC} to reboot immediately" >&3
+echo -e "     Press ${RED}C${NC} to cancel and stay in shell" >&3
+echo -e "     Wait 30 seconds for automatic reboot" >&3
+echo "" >&3
+
+# Read with timeout - allows cancel
+REBOOT_CHOICE=""
+read -t 30 -n 1 REBOOT_CHOICE 2>&3 <&3 || true
+
+case "$REBOOT_CHOICE" in
+    c|C)
+        echo "" >&3
+        echo -e "${YELLOW}Reboot cancelled.${NC}" >&3
+        echo "Run 'reboot' manually when ready." >&3
+        echo "Or run 'sh validate.sh' to verify installation." >&3
+        exit 0
+        ;;
+    *)
+        echo "" >&3
+        echo -e "${GREEN}Rebooting now...${NC}" >&3
+        sleep 1
+        reboot
+        ;;
+esac
