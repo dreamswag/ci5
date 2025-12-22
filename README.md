@@ -7,17 +7,17 @@
 -----
 > [!NOTE]
 > ## 📊 Realtime Response Under Load (RRUL)
->
-> ### RRUL 30s Sustained:
 > ###### > 500/500Mbps ONT Fiber
 > ###### > USB 3.0 Gigabit NIC (WAN)
 > ###### > Packet Offloading Disabled
+> ###### > Active: (Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Unbound + CAKE)
+> ----
+> ### 30s Sustained (0.2s Step):
 > ![rrul.png](images/rrul.png)
 > ----
-> ### CPU Usage Max w/ RRUL: 46% (All Cores)
-> ###### > Active: (Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Unbound + CAKE)
+> ### CPU (All Cores) Utilisation Peak: 46% 
 > ![rrul_peak.jpg](images/RRUL_peak.jpg)
-> ## **Throughput 🟰 Volume ; Latency 🟰 Discipline**
+> ## **Throughput 🟰 Volume ☯️ Latency 🟰 Discipline**
 >
 > **1. Network does not buckle under load:**
 > * **Status:** Saturated (500/500 Mbps)
