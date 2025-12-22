@@ -59,20 +59,20 @@ curl ci5.run/free | sh
 
 **Hybrid Control Plane:** Kernel handles packets. Docker handles intelligence.
 
-| Path | Runs Where | If It Dies |
-|------|------------|------------|
-| **Fast Path** | Bare metal | N/A (kernel) |
-| **Smart Path** | Docker | Internet stays up |
+| Path           | Runs Where        | Job                                                | If It Crashes → Internet Impact              |
+| -------------- | ----------------- | -------------------------------------------------- | -------------------------------------------- |
+| **Fast Path**  | Bare metal kernel | Routing · NAT · CAKE SQM · BBR · Unbound           | **Still 100% up** → 0 ms latency maintained  |
+| **Smart Path** | Isolated Docker   | Suricata IDS · CrowdSec · Ntopng · Redis · AdGuard | **Still 100% up** → temporarily packet blind |
 
 📚 **[Deep Dive →](https://github.com/dreamswag/ci5.network/blob/main/docs/ARCHITECTURE.md)**
 
 ---
 
-## ✅ Reference
+## 📋 Getting Started
 
 | Step | Action |
 |------|--------|
-| 1 | Flash Golden Image or run `curl ci5.run/free \| sh` |
+| 1 | Flash Golden Image (or run `curl ci5.run/free \| sh`) |
 | 2 | Connect hardware (USB NIC → WAN, eth0 → AP) |
 | 3 | Run `sh setup.sh` |
 | 4 | Deploy stack (`install-lite.sh` or `install-full.sh`) |
