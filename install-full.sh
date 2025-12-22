@@ -4,6 +4,7 @@
 # 
 # Critical Fixes Applied:
 #   [1] Atomic rollback on failure
+#   [12] Force AdGuard password change on first install
 
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -176,6 +177,213 @@ set -E
 trap 'rollback_on_error' ERR
 
 # ─────────────────────────────────────────────────────────────
+# CRITICAL FIX [12]: ADGUARD PASSWORD GENERATION
+# ─────────────────────────────────────────────────────────────
+# Generate a cryptographically secure random password
+generate_secure_password() {
+    local length=${1:-16}
+    # Generate password with alphanumeric + special chars
+    head -c 256 /dev/urandom | tr -dc 'A-Za-z0-9!@#$%^&*()_+-=' | head -c "$length"
+}
+
+# Generate bcrypt hash for AdGuard Home
+# AdGuard uses bcrypt with cost factor 10
+hash_adguard_password() {
+    local password="$1"
+    
+    # Try htpasswd first (most common)
+    if command -v htpasswd >/dev/null 2>&1; then
+        echo -n "$password" | htpasswd -niBC 10 "" 2>/dev/null | tr -d ':\n' | sed 's/^\$//'
+        return $?
+    fi
+    
+    # Try Python bcrypt
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c "
+import bcrypt
+import sys
+password = sys.argv[1].encode()
+hashed = bcrypt.hashpw(password, bcrypt.gensalt(rounds=10))
+print(hashed.decode())
+" "$password" 2>/dev/null && return 0
+    fi
+    
+    # Fallback: Use openssl with sha256 (less secure but functional)
+    # AdGuard can accept this format in older versions
+    echo -n "$password" | openssl passwd -6 -stdin 2>/dev/null
+}
+
+# Setup AdGuard with forced password change
+setup_adguard_password() {
+    local adguard_config="/opt/ci5-docker/adguard/conf/AdGuardHome.yaml"
+    local password_file="/root/.ci5_adguard_firstrun"
+    
+    # Check if this is first run (no password file exists)
+    if [ -f "$password_file" ]; then
+        echo "[ADGUARD] Password already configured"
+        return 0
+    fi
+    
+    echo ""
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║  🔐 ADGUARD HOME - FIRST TIME SETUP                              ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    # Generate random password
+    ADGUARD_PASSWORD=$(generate_secure_password 20)
+    
+    # Hash the password
+    echo "[ADGUARD] Generating secure password hash..."
+    ADGUARD_HASH=$(hash_adguard_password "$ADGUARD_PASSWORD")
+    
+    if [ -z "$ADGUARD_HASH" ]; then
+        echo -e "${YELLOW}[ADGUARD] Warning: Could not generate bcrypt hash${NC}"
+        echo "[ADGUARD] Installing bcrypt support..."
+        
+        # Try to install dependencies
+        pip3 install bcrypt --break-system-packages 2>/dev/null || \
+        opkg install python3-bcrypt 2>/dev/null || \
+        apt-get install -y python3-bcrypt 2>/dev/null || true
+        
+        # Retry hash generation
+        ADGUARD_HASH=$(hash_adguard_password "$ADGUARD_PASSWORD")
+        
+        if [ -z "$ADGUARD_HASH" ]; then
+            echo -e "${RED}[ADGUARD] Failed to hash password. Using default.${NC}"
+            echo "          Please change password manually in AdGuard UI!"
+            return 1
+        fi
+    fi
+    
+    # Update AdGuard config
+    mkdir -p "$(dirname "$adguard_config")"
+    
+    if [ -f "$adguard_config" ]; then
+        # Replace the placeholder hash
+        sed -i "s/PASSWORD_HASH_GOES_HERE/${ADGUARD_HASH}/g" "$adguard_config"
+        
+        # Also update if it still has the old default
+        if grep -q "password: \"\$2" "$adguard_config" 2>/dev/null; then
+            # Config already has a bcrypt hash - update it
+            sed -i "s|password: \"\$2[^\"]*\"|password: \"${ADGUARD_HASH}\"|g" "$adguard_config"
+        fi
+    else
+        # Create minimal config with the new password
+        cat > "$adguard_config" << ADGUARD_YAML
+http:
+  pprof:
+    port: 6060
+    enabled: false
+  address: 0.0.0.0:3000
+  session_ttl: 720h
+users:
+  - name: admin
+    password: ${ADGUARD_HASH}
+auth_attempts: 5
+block_auth_min: 15
+http_proxy: ""
+language: ""
+theme: auto
+dns:
+  bind_hosts:
+    - 0.0.0.0
+  port: 53
+  anonymize_client_ip: false
+  ratelimit: 20
+  ratelimit_subnet_len_ipv4: 24
+  ratelimit_subnet_len_ipv6: 56
+  ratelimit_whitelist: []
+  refuse_any: true
+  upstream_dns:
+    - 127.0.0.1:5335
+  upstream_dns_file: ""
+  bootstrap_dns:
+    - 127.0.0.1:5335
+  fallback_dns: []
+  upstream_mode: load_balance
+  cache_enabled: true
+  cache_size: 4194304
+  cache_ttl_min: 0
+  cache_ttl_max: 0
+  cache_optimistic: false
+  enable_dnssec: false
+  local_ptr_upstreams:
+    - 127.0.0.1:53535
+filters:
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt
+    name: AdGuard DNS filter
+    id: 1
+  - enabled: false
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_2.txt
+    name: AdAway Default Blocklist
+    id: 2
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_27.txt
+    name: OISD Blocklist Big
+    id: 1765494002
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_30.txt
+    name: Phishing URL Blocklist (PhishTank and OpenPhish)
+    id: 1765494003
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_44.txt
+    name: HaGeZi's Threat Intelligence Feeds
+    id: 1765494004
+whitelist_filters: []
+user_rules:
+  - '||wpad.lan^$important'
+dhcp:
+  enabled: false
+clients:
+  runtime_sources:
+    whois: true
+    arp: true
+    rdns: true
+    dhcp: true
+    hosts: true
+  persistent: []
+log:
+  enabled: true
+  file: ""
+schema_version: 32
+ADGUARD_YAML
+    fi
+    
+    # Mark that password has been set
+    echo "$(date -Iseconds)" > "$password_file"
+    chmod 600 "$password_file"
+    
+    # Display the password to the user (ONE TIME ONLY)
+    echo ""
+    echo -e "${GREEN}╔══════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║  🔑 ADGUARD HOME CREDENTIALS (SAVE THESE NOW!)                   ║${NC}"
+    echo -e "${GREEN}╠══════════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${GREEN}║                                                                  ║${NC}"
+    echo -e "${GREEN}║  Username: ${CYAN}admin${GREEN}                                                ║${NC}"
+    echo -e "${GREEN}║  Password: ${CYAN}${ADGUARD_PASSWORD}${GREEN}                            ║${NC}"
+    echo -e "${GREEN}║                                                                  ║${NC}"
+    echo -e "${GREEN}║  URL: ${CYAN}http://192.168.99.1:3000${GREEN}                                 ║${NC}"
+    echo -e "${GREEN}║                                                                  ║${NC}"
+    echo -e "${GREEN}╠══════════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${YELLOW}║  ⚠️  THIS PASSWORD WILL NOT BE SHOWN AGAIN!                       ║${NC}"
+    echo -e "${YELLOW}║      Write it down or save it to your password manager.          ║${NC}"
+    echo -e "${GREEN}╚══════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    # Prompt user to confirm they've saved the password
+    echo -e "${YELLOW}Press ENTER after you have saved these credentials...${NC}"
+    read -r CONFIRM
+    
+    # Clear the password from memory
+    unset ADGUARD_PASSWORD
+    unset ADGUARD_HASH
+    
+    return 0
+}
+
+# ─────────────────────────────────────────────────────────────
 # INITIALIZE ATOMIC ROLLBACK
 # ─────────────────────────────────────────────────────────────
 echo "[*] Initializing atomic rollback system..."
@@ -226,7 +434,13 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 # ─────────────────────────────────────────────────────────────
-# MODULE C: CORE STACK (AdGuard/Unbound)
+# MODULE C: ADGUARD PASSWORD SETUP (Before container start)
+# ─────────────────────────────────────────────────────────────
+echo "[*] Configuring AdGuard Home..."
+setup_adguard_password
+
+# ─────────────────────────────────────────────────────────────
+# MODULE D: CORE STACK (AdGuard/Unbound)
 # ─────────────────────────────────────────────────────────────
 echo "[*] Deploying Core Stack..."
 
@@ -268,7 +482,7 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────
-# MODULE D: CORK INJECTION (The App Store)
+# MODULE E: CORK INJECTION (The App Store)
 # ─────────────────────────────────────────────────────────────
 echo "[*] Uncorking Registry Modules..."
 
@@ -339,7 +553,7 @@ echo ""
 echo "    Cork Summary: ${GREEN}$CORK_SUCCESS succeeded${NC}, ${YELLOW}$CORK_FAILED failed${NC}"
 
 # ─────────────────────────────────────────────────────────────
-# MODULE E: FULL STACK DEPLOYMENT (IDS/IPS)
+# MODULE F: FULL STACK DEPLOYMENT (IDS/IPS)
 # ─────────────────────────────────────────────────────────────
 echo "[*] Deploying Full Security Stack..."
 
@@ -359,7 +573,7 @@ echo "[*] Service Status:"
 docker ps --format "    {{.Names}}: {{.Status}}" | head -10
 
 # ─────────────────────────────────────────────────────────────
-# MODULE F: FINALIZATION
+# MODULE G: FINALIZATION
 # ─────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════════════════════════╗${NC}"
