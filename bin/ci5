@@ -1,0 +1,145 @@
+#!/bin/bash
+# ⛩️ Ci5 CLI (v1.0-GOLD)
+# The Bridge: Enables 'ci5 login' (Auth) and 'ci5 run' (Install)
+# Privacy: Anonymous by default. Auth is strictly opt-in.
+
+# --- CONFIGURATION (SET BY DEVELOPER) ---
+# Create at github.com/settings/developers > OAuth Apps > New
+# Enable "Device Flow" in settings!
+CLIENT_ID="Ov23liSwq6nuhqFog2xr" 
+REGISTRY_URL="https://ci5.dev/corks.json"
+AUTH_FILE="/etc/ci5/auth.token"
+
+# --- HELPERS ---
+ensure_jq() { 
+    if ! command -v jq >/dev/null; then 
+        echo "Installing dependencies..."
+        opkg update && opkg install jq >/dev/null
+    fi 
+}
+
+get_serial() { 
+    grep -i "serial" /proc/cpuinfo 2>/dev/null | awk '{print $3}' || cat /etc/ci5_hwid 2>/dev/null
+}
+
+get_hw_key() { 
+    # Derives the same hardware key as setup.sh for cross-script compatibility
+    echo -n "$(get_serial)CI5_SOVEREIGN_SALT_2025" | sha256sum | cut -c1-64
+}
+
+# --- COMMAND: LOGIN (OPTIONAL) ---
+cmd_login() {
+    ensure_jq
+    echo -e "\033[0;32m> Initiating Device Handshake...\033[0m"
+    
+    # 1. Request Device Code from GitHub
+    RESP=$(curl -s -X POST -H "Accept: application/json" \
+        -d "client_id=$CLIENT_ID" \
+        -d "scope=read:user" \
+        https://github.com/login/device/code)
+    
+    CODE=$(echo "$RESP" | jq -r .user_code)
+    URL=$(echo "$RESP" | jq -r .verification_uri)
+    DEVICE=$(echo "$RESP" | jq -r .device_code)
+    
+    if [ "$CODE" == "null" ]; then
+        echo "Error: Could not connect to GitHub. Check internet or Client ID."
+        exit 1
+    fi
+
+    # 2. User Action
+    echo ""
+    echo -e "\033[1;33mAction Required:\033[0m"
+    echo -e "1. Visit: \033[1;37m$URL\033[0m"
+    echo -e "2. Code:  \033[1;32m$CODE\033[0m"
+    echo ""
+    echo -n "Waiting for authorization..."
+
+    # 3. Polling Loop
+    while true; do
+        sleep 5
+        AUTH=$(curl -s -X POST -H "Accept: application/json" \
+            -d "client_id=$CLIENT_ID" \
+            -d "device_code=$DEVICE" \
+            -d "grant_type=urn:ietf:params:oauth:grant-type:device_code" \
+            https://github.com/login/oauth/access_token)
+            
+        TOKEN=$(echo "$AUTH" | jq -r .access_token)
+        [ "$TOKEN" != "null" ] && break
+        echo -n "."
+    done
+
+    # 4. Identity Retrieval & Encryption
+    USER=$(curl -s -H "Authorization: token $TOKEN" https://api.github.com/user | jq -r .login)
+    
+    # Calculate Ci5-ASH (Hardware + User Binding)
+    ASH=$(echo -n "$(get_serial)$USER" | sha256sum | cut -c1-16)
+    
+    # Encrypt token using Hardware Key
+    mkdir -p /etc/ci5
+    JSON="{\"user\":\"$USER\",\"token\":\"$TOKEN\",\"ash\":\"$ASH\"}"
+    echo "$JSON" | openssl enc -aes-256-cbc -salt -pbkdf2 -iter 100000 -pass "pass:$(get_hw_key)" -out "$AUTH_FILE"
+    
+    echo -e "\n\033[0;32m> Success.\033[0m Linked to: \033[1;37m$USER\033[0m (ASH: $ASH)"
+}
+
+# --- COMMAND: RUN (ANONYMOUS DEFAULT) ---
+cmd_run() {
+    [ -z "$1" ] && echo "Usage: ci5 run <cork_name>" && exit 1
+    ensure_jq
+    
+    # Visual Identity Check
+    if [ -f "$AUTH_FILE" ]; then
+        USER=$(openssl enc -d -aes-256-cbc -pass "pass:$(get_hw_key)" -in "$AUTH_FILE" 2>/dev/null | jq -r .user)
+        echo -e "\033[0;35m[Auth: $USER]\033[0m"
+    else
+        echo -e "\033[0;33m[Auth: GHOST MODE (Anonymous)]\033[0m"
+    fi
+    
+    # 1. Fetch Registry (Public/Anonymous)
+    CACHE="/tmp/corks.json"
+    # Cache for 60 mins
+    if [ ! -f "$CACHE" ] || [ $(find "$CACHE" -mmin +60 2>/dev/null) ]; then
+        curl -sL "$REGISTRY_URL" -o "$CACHE"
+    fi
+    
+    # 2. Lookup Cork
+    DATA=$(jq ".official[\"$1\"] // .community[\"$1\"]" "$CACHE")
+    if [ "$DATA" == "null" ]; then echo "Cork '$1' not found."; exit 1; fi
+    
+    REPO=$(echo "$DATA" | jq -r .repo)
+    DEST="/opt/ci5/corks/$1"
+    
+    echo -e "\033[0;32m> Installing $1...\033[0m"
+    
+    # 3. Install/Update
+    if [ -d "$DEST" ]; then
+        rm -rf "$DEST" # Force fresh clone to ensure cleanliness
+    fi
+    
+    git clone --depth 1 "https://github.com/$REPO.git" "$DEST"
+    
+    # 4. Launch
+    if [ -f "$DEST/docker-compose.yml" ]; then
+        cd "$DEST" && docker compose up -d
+    elif [ -f "$DEST/init.sh" ]; then
+        bash "$DEST/init.sh"
+    fi
+    
+    # 5. Persist (Add to 'Soul')
+    if ! grep -q "$REPO" /etc/ci5_corks 2>/dev/null; then
+        echo "$REPO" >> /etc/ci5_corks
+    fi
+    
+    echo -e "\033[0;32m> Online.\033[0m"
+}
+
+# --- ENTRYPOINT ---
+case "$1" in
+    login) cmd_login ;;
+    run) cmd_run "$2" ;;
+    *) 
+        echo "Ci5 Bridge (v1.0)"
+        echo "Usage: ci5 [run <cork> | login]"
+        ;;
+esac
