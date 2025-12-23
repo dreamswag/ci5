@@ -1,0 +1,49 @@
+name: Cork Auto-Auditor
+
+on:
+  pull_request:
+    paths:
+      - 'corks.json'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  audit-and-merge:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔍 Validate JSON Syntax
+        run: |
+          if ! jq empty corks.json; then
+            echo "::error::Invalid JSON syntax."
+            exit 1
+          fi
+
+      - name: 🕵️ Deep Audit (Check Fields & Repos)
+        id: audit
+        run: |
+          # Extract all 'repo' URLs from the PR version of corks.json
+          REPOS=$(jq -r '.community | values[] | .repo' corks.json)
+          
+          for REPO in $REPOS; do
+            echo "Checking existence of: $REPO"
+            HTTP_CODE=$(curl -o /dev/null --silent --head --write-out '%{http_code}\n' "https://github.com/$REPO")
+            
+            if [ "$HTTP_CODE" -ne 200 ]; then
+              echo "::error::Repo '$REPO' is not reachable (HTTP $HTTP_CODE)."
+              exit 1
+            fi
+          done
+          echo "All corks point to valid repositories."
+
+      - name: 🤖 Auto-Merge (If Safe)
+        if: steps.audit.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} --squash --admin --subject "🤖 Auto-Merged by CorkBot"
