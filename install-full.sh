@@ -1,52 +1,98 @@
 #!/bin/bash
-# 🏰 Ci5 Unified Installer (v7.5-HARDENED: The Cork Registry)
-# Deploys Docker, Core Services, and Community Corks
+# 🏰 Ci5 Unified Installer (v7.6-IDENTITY: Hardware Verification)
+# Deploys Docker, Core Services, Community Corks, and Hardware Identity
 
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 
-echo -e "${GREEN}Starting Ci5 Full Stack Installation (v7.5-HARDENED)...${NC}"
+echo -e "${GREEN}Starting Ci5 Full Stack Installation (v7.6-IDENTITY)...${NC}"
 
 #══════════════════════════════════════════════════════════════════════════════
-# 1. IDENTITY INITIALIZATION (Passive / Offline Friendly)
+# 1. HARDWARE IDENTITY INITIALIZATION
 #══════════════════════════════════════════════════════════════════════════════
+# Creates deterministic HWID from Pi serial. Same hardware = same identity forever.
+# This runs BEFORE any network operations (offline-friendly).
 
 CI5_IDENTITY_DIR="/etc/ci5"
 CI5_IDENTITY_VERSION="v1"
+CI5_IDENTITY_FILE="$CI5_IDENTITY_DIR/.hwid"
 
-init_identity() {
+init_hardware_identity() {
     echo "🦴 Initializing Ci5 Hardware Identity..."
     
+    # Skip if already initialized (idempotent)
+    if [ -f "$CI5_IDENTITY_FILE" ]; then
+        EXISTING_HWID=$(cat "$CI5_IDENTITY_FILE")
+        echo -e "✅ Identity exists: ${GREEN}${EXISTING_HWID:0:8}...${NC}"
+        return 0
+    fi
+    
+    # Create secure directory
     mkdir -p "$CI5_IDENTITY_DIR"
     chmod 700 "$CI5_IDENTITY_DIR"
     
-    # Get Pi 5 Serial (Robust detection)
+    # ─────────────────────────────────────────────────────────────────────────
+    # GET HARDWARE SERIAL
+    # Priority: Pi Serial > DMI UUID > MAC Address > Random (last resort)
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    SERIAL=""
+    
+    # Try 1: Raspberry Pi serial from cpuinfo (most reliable for Pi 5)
     if [ -f /proc/cpuinfo ]; then
-        SERIAL=$(grep -i "^Serial" /proc/cpuinfo | awk '{print $3}' | head -1)
+        SERIAL=$(grep -i "^Serial" /proc/cpuinfo 2>/dev/null | awk '{print $3}' | head -1)
+        
+        # Exclude invalid/default values
+        if [ "$SERIAL" = "0000000000000000" ] || [ "$SERIAL" = "00000000" ]; then
+            SERIAL=""
+        fi
     fi
     
-    if [ -z "$SERIAL" ] || [ "$SERIAL" = "0000000000000000" ]; then
-        echo -e "${YELLOW}⚠️  Warning: Could not read hardware serial. Using fallback identity.${NC}"
-        # Fallback for non-Pi hardware or virtualization
-        SERIAL="UNKNOWN_$(cat /sys/class/net/eth0/address 2>/dev/null | tr -d ':')"
-        if [ -z "$SERIAL" ]; then SERIAL="UNKNOWN_$(cat /proc/sys/kernel/random/uuid)"; fi
+    # Try 2: x86/Server DMI product UUID
+    if [ -z "$SERIAL" ] && [ -f /sys/class/dmi/id/product_uuid ]; then
+        SERIAL=$(cat /sys/class/dmi/id/product_uuid 2>/dev/null)
     fi
     
-    # HWID: Permanent, deterministic hardware identity
-    # SHA256(Serial + Salt) -> Same Pi always produces same HWID
+    # Try 3: Primary network interface MAC address
+    if [ -z "$SERIAL" ]; then
+        for iface in eth0 enp0s3 ens33 wlan0 end0; do
+            if [ -f "/sys/class/net/$iface/address" ]; then
+                MAC=$(cat "/sys/class/net/$iface/address" 2>/dev/null | tr -d ':')
+                if [ -n "$MAC" ] && [ "$MAC" != "000000000000" ]; then
+                    SERIAL="MAC_$MAC"
+                    break
+                fi
+            fi
+        done
+    fi
+    
+    # Try 4: Last resort - generate random UUID
+    # WARNING: This identity will change if you reinstall!
+    if [ -z "$SERIAL" ]; then
+        echo -e "${YELLOW}⚠️  Warning: No hardware serial found. Using random identity.${NC}"
+        echo -e "${YELLOW}   (This identity will change if you reinstall.)${NC}"
+        SERIAL="RANDOM_$(cat /proc/sys/kernel/random/uuid | tr -d '-')"
+    fi
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # GENERATE DETERMINISTIC HWID
+    # SHA256(Serial + Salt) — Same hardware always produces same hash
+    # The serial NEVER leaves this device. Only the hash is ever transmitted.
+    # ─────────────────────────────────────────────────────────────────────────
+    
     HWID=$(echo -n "${SERIAL}:ci5-permanent-identity-${CI5_IDENTITY_VERSION}" | sha256sum | cut -d' ' -f1)
     
-    # Store locally (Used for verification ONLY if user chooses to verify)
-    echo "$HWID" > "$CI5_IDENTITY_DIR/.hwid"
-    chmod 600 "$CI5_IDENTITY_DIR/.hwid"
+    # Store identity (readable only by root)
+    echo "$HWID" > "$CI5_IDENTITY_FILE"
+    chmod 600 "$CI5_IDENTITY_FILE"
     
-    echo -e "✅ Identity Initialized: ${GREEN}${HWID:0:8}...${HWID: -8}${NC}"
-    echo "   (This identity is required only for Voting and Forum Posting)"
+    echo -e "✅ Identity Generated: ${GREEN}${HWID:0:8}...${HWID: -8}${NC}"
     echo ""
+    return 0
 }
 
-# Run identity init immediately (Non-blocking)
-init_identity
+# Run identity initialization immediately (before any network ops)
+init_hardware_identity
 
 # ─────────────────────────────────────────────────────────────
 # ATOMIC ROLLBACK INFRASTRUCTURE
@@ -202,7 +248,7 @@ echo "[*] Initializing atomic rollback system..."
 init_atomic_rollback
 
 echo "[*] Installing Dependencies..."
-opkg update && opkg install git-http curl ca-certificates parted losetup resize2fs
+opkg update && opkg install git-http curl ca-certificates parted losetup resize2fs jq
 
 echo "[*] Checking Docker..."
 if ! command -v docker &> /dev/null; then
@@ -251,32 +297,71 @@ cd /opt/ci5/docker 2>/dev/null || true
 docker compose --profile full up -d
 
 # ─────────────────────────────────────────────────────────────
-# FINALIZATION
+# CLI INSTALLATION (Identity-Aware)
 # ─────────────────────────────────────────────────────────────
 echo ""
-echo -e "${GREEN}[*] Installing Ci5 CLI...${NC}"
-if [ -f "/opt/ci5/bin/ci5" ]; then
-    chmod +x /opt/ci5/bin/ci5
-    ln -sf /opt/ci5/bin/ci5 /usr/bin/ci5 2>/dev/null
+echo -e "${GREEN}[*] Installing Ci5 CLI (v3.0-IDENTITY)...${NC}"
+
+# Create CLI directories
+mkdir -p /opt/ci5/bin
+mkdir -p /opt/ci5/scripts
+
+# Download CLI with identity commands (link, verify, whoami)
+CLI_URL="https://raw.githubusercontent.com/dreamswag/ci5/main/tools/ci5-cli"
+CLI_PATH="/opt/ci5/bin/ci5"
+
+if curl -sfL "$CLI_URL" -o "$CLI_PATH" 2>/dev/null; then
+    chmod +x "$CLI_PATH"
+    echo "    ✓ CLI downloaded from repository"
 else
-    # Install the latest CLI (which supports the open install / verified vote model)
-    curl -sL "https://raw.githubusercontent.com/dreamswag/ci5/main/bin/ci5" -o /usr/bin/ci5
-    chmod +x /usr/bin/ci5
+    # Fallback: Use bundled CLI if network fails
+    if [ -f "/opt/ci5/tools/ci5-cli" ]; then
+        cp /opt/ci5/tools/ci5-cli "$CLI_PATH"
+        chmod +x "$CLI_PATH"
+        echo "    ✓ CLI installed from bundle"
+    else
+        echo -e "${YELLOW}    ⚠ CLI download failed. Install manually later.${NC}"
+    fi
 fi
+
+# Create symlink for global access
+ln -sf "$CLI_PATH" /usr/bin/ci5 2>/dev/null || ln -sf "$CLI_PATH" /usr/local/bin/ci5 2>/dev/null
+
+# Verify CLI works
+if command -v ci5 &>/dev/null; then
+    echo -e "    ✓ CLI available: ${CYAN}ci5 --help${NC}"
+fi
+
+# ─────────────────────────────────────────────────────────────
+# FINALIZATION
+# ─────────────────────────────────────────────────────────────
+HWID=$(cat "$CI5_IDENTITY_FILE" 2>/dev/null || echo "unknown")
 
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║  ✅ FULL STACK INSTALLATION COMPLETE                             ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
-echo "    Your hardware identity has been generated at /etc/ci5/.hwid"
-echo "    Use 'ci5 link' ONLY if you wish to participate in forums/voting."
-echo "    Use 'ci5 install <cork>' to fetch packages (no login required)"
+echo -e "    ${CYAN}Hardware Identity${NC}"
+echo -e "    HWID: ${GREEN}${HWID:0:8}...${HWID: -8}${NC}"
+echo -e "    File: /etc/ci5/.hwid"
 echo ""
-echo "    Access Points:"
+echo -e "    ${CYAN}Community Participation (Optional)${NC}"
+echo -e "    Run '${GREEN}ci5 link${NC}' to connect your GitHub account."
+echo -e "    This enables posting in forums and voting on corks."
+echo ""
+echo -e "    ${CYAN}Cork Installation (No Login Required)${NC}"
+echo -e "    Run '${GREEN}ci5 install <cork>${NC}' to fetch packages."
+echo ""
+echo -e "    ${CYAN}Access Points${NC}"
 echo "      SSH:        ssh root@192.168.99.1"
 echo "      AdGuard:    http://192.168.99.1:3000"
 echo "      Ntopng:     http://192.168.99.1:3001"
+echo ""
+echo -e "    ${CYAN}Quick Commands${NC}"
+echo "      ci5 whoami     — Show identity status"
+echo "      ci5 link       — Link to GitHub (one-time)"
+echo "      ci5 verify     — Verify browser session"
 echo ""
 
 trap - ERR
