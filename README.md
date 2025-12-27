@@ -13,10 +13,10 @@
 > ###### > Active: (Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Unbound + CAKE)
 > ----
 > ### 30s Sustained (0.2s Step):
-> ![rrul.png](images/rrul.png)
+> ![rrul.png](docs/images/rrul.png)
 > ----
 > ### CPU (All Cores) Utilisation Peak: 46% 
-> ![rrul_peak.jpg](images/RRUL_peak.jpg)
+> ![rrul_peak.jpg](docs/images/RRUL_peak.jpg)
 > ## **Throughput 🟰 Volume ⛩️ Latency 🟰 Discipline**
 >
 > **1. Network does not buckle under load:**
