@@ -1,13 +1,14 @@
 #!/bin/bash
-# ⛩️ Ci5 Bootstrap: The Phoenix Protocol
-# Captures config -> Wipes Disk -> Flashes OpenWrt -> Injects Config -> Reboots
+# ⛩️ Ci5 Bootstrap: The Phoenix Protocol (Golden Edition)
+# Pulls Golden Image -> Wipes Disk -> Expands Storage (RAM) -> Injects Config -> Reboots
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 CONFIG_FILE="/dev/shm/ci5_soul.conf"
+GOLDEN_URL="https://github.com/dreamswag/ci5/releases/latest/download/ci5-factory.img.gz"
 
 # --- 1. AM I ALREADY OPENWRT? ---
 if [ -f /etc/openwrt_release ]; then
-    echo -e "${GREEN}System is OpenWrt. Proceeding to Stack Injection...${NC}"
+    echo -e "${GREEN}System is OpenWrt (Ci5). Proceeding to Stack Injection...${NC}"
     opkg update && opkg install git-http curl ca-certificates
     mkdir -p /opt
     if [ -d "/opt/ci5" ]; then cd /opt/ci5 && git pull; else git clone https://github.com/dreamswag/ci5.git /opt/ci5; fi
@@ -18,9 +19,8 @@ fi
 
 # --- 2. THE INTERVIEW (Run on Debian) ---
 clear
-echo -e "${GREEN}Ci5 MIGRATION WIZARD${NC}"
-echo "This will replace your current OS with Ci5 (OpenWrt)."
-echo "We need your network details to ensure the new OS comes online automatically."
+echo -e "${GREEN}Ci5 MIGRATION WIZARD (Golden Image)${NC}"
+echo "This will replace your current OS with the Ci5 Golden Image."
 echo ""
 
 # A. Detect Interface
@@ -43,6 +43,13 @@ else
     PROTO="dhcp"
 fi
 
+# C. Capture Existing Corks (Persist App Store Selections)
+EXISTING_CORKS=""
+if [ -f /etc/ci5_corks ]; then
+    EXISTING_CORKS=$(cat /etc/ci5_corks)
+    echo -e "Preserving Apps: ${YELLOW}$EXISTING_CORKS${NC}"
+fi
+
 # Save the "Soul" to RAM
 cat > $CONFIG_FILE <<EOF
 WAN_IFACE="$IFACE"
@@ -50,36 +57,49 @@ WAN_PROTO="$PROTO"
 PPP_USER="$PPP_USER"
 PPP_PASS="$PPP_PASS"
 VLAN_ID="$VLAN_ID"
+SAVED_CORKS="$EXISTING_CORKS"
 EOF
 
 # --- 3. PREPARE THE FLASH (RAM) ---
-MODEL=$(cat /proc/device-tree/model 2>/dev/null)
-if echo "$MODEL" | grep -q "Raspberry Pi 5"; then
-    IMG_URL="https://downloads.openwrt.org/snapshots/targets/bcm27xx/bcm2712/openwrt-bcm27xx-bcm2712-rpi-5-squashfs-factory.img.gz"
-elif echo "$MODEL" | grep -q "Raspberry Pi 4"; then
-    IMG_URL="https://downloads.openwrt.org/releases/23.05.2/targets/bcm27xx/bcm2711/openwrt-23.05.2-bcm27xx-bcm2711-rpi-4-squashfs-factory.img.gz"
-else
-    echo "Unsupported Hardware."
-    exit 1
+if ! grep -q "Raspberry Pi 5" /proc/cpuinfo; then
+    echo "⚠️  Warning: This Golden Image is built for Pi 5."
+    echo "Proceeding anyway in 3s..."
+    sleep 3
 fi
 
 echo ""
-echo -e "${YELLOW}Downloading Payload to RAM...${NC}"
+echo -e "${YELLOW}Downloading Golden Image to RAM...${NC}"
 cd /dev/shm
-curl -L -o openwrt.img.gz "$IMG_URL"
-curl -L -o busybox "https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox"
+curl -L -o openwrt.img.gz "$GOLDEN_URL"
+if [ ! -s openwrt.img.gz ]; then
+    echo -e "${RED}Error: Download failed or file empty.${NC}"
+    exit 1
+fi
+
+# Tools for RAM operations (Pi 5 is aarch64)
+curl -L -o busybox "https://busybox.net/downloads/binaries/1.35.0-aarch64-linux-musl/busybox"
 chmod +x busybox
 
 # Create the Phoenix Script
 cat > phoenix.sh << 'EOF'
 #!/bin/sh
-echo ">> WRITING OPENWRT TO DISK..."
+# This runs in RAM. Path is /run/initramfs/phoenix.sh
+
+echo ">> WRITING GOLDEN IMAGE TO DISK..."
 zcat openwrt.img.gz | dd of=/dev/mmcblk0 bs=4M conv=fsync status=none
 
-echo ">> RELOADING PARTITION TABLE..."
-blockdev --rereadpt /dev/mmcblk0
-mdev -s 2>/dev/null
-sleep 2
+echo ">> EXPANDING PARTITION 2 (MAX STORAGE)..."
+# 1. Force Kernel to see the new partition table
+./busybox blockdev --rereadpt /dev/mmcblk0
+sleep 1
+
+# 2. FDISK MAGIC: Delete Part 2, Recreate Part 2 (filling disk)
+# d=delete, 2=part2, n=new, p=primary, 2=part2, \n=default start, \n=default end, w=write
+printf "d\n2\nn\np\n2\n\n\nw\n" | ./busybox fdisk /dev/mmcblk0
+
+echo ">> FINAL PARTITION RELOAD..."
+./busybox blockdev --rereadpt /dev/mmcblk0
+sleep 1
 
 echo ">> INJECTING SOUL (CONFIG)..."
 mkdir -p /mnt/new_root
@@ -90,7 +110,12 @@ if [ $? -eq 0 ]; then
     NW_FILE="/mnt/new_root/etc/config/network"
     RC_FILE="/mnt/new_root/etc/rc.local"
 
-    # Reset network to basic static LAN
+    # Restore Corks
+    if [ -n "$SAVED_CORKS" ]; then
+        echo "$SAVED_CORKS" > /mnt/new_root/etc/ci5_corks
+    fi
+
+    # Reset network to basic static LAN (192.168.99.1)
     echo "config interface 'loopback'" > $NW_FILE
     echo "    option device 'lo'" >> $NW_FILE
     echo "    option proto 'static'" >> $NW_FILE
@@ -108,7 +133,7 @@ if [ $? -eq 0 ]; then
     echo "config interface 'lan'" >> $NW_FILE
     echo "    option device 'br-lan'" >> $NW_FILE
     echo "    option proto 'static'" >> $NW_FILE
-    echo "    option ipaddr '192.168.1.1'" >> $NW_FILE
+    echo "    option ipaddr '192.168.99.1'" >> $NW_FILE 
     echo "    option netmask '255.255.255.0'" >> $NW_FILE
 
     # Inject WAN
@@ -141,7 +166,7 @@ if [ $? -eq 0 ]; then
 
     umount /mnt/new_root
 else
-    echo ">> MOUNT FAILED. BOOTING STOCK."
+    echo ">> MOUNT FAILED. BOOTING GOLDEN STOCK."
 fi
 
 echo ">> REBOOTING..."
@@ -155,7 +180,7 @@ cp $CONFIG_FILE /dev/shm/ci5_soul.conf
 echo -e "${RED}Goodbye, Debian.${NC}"
 mkdir -p /run/initramfs
 mount -t tmpfs tmpfs /run/initramfs
-cp phoenix.sh openwrt.img.gz ci5_soul.conf busybox /bin/dd /bin/gzip /bin/sync /run/initramfs/
+cp phoenix.sh openwrt.img.gz ci5_soul.conf busybox /run/initramfs/
 cd /run/initramfs
 echo 1 > /proc/sys/kernel/sysrq
 echo u > /proc/sysrq-trigger

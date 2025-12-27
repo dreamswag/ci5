@@ -1,11 +1,6 @@
 #!/bin/bash
 # 🏰 Ci5 Unified Installer (v7.5-HARDENED: The Cork Registry)
 # Deploys Docker, Core Services, and Community Corks
-# 
-# Critical Fixes Applied:
-#   [1] Atomic rollback on failure
-#   [12] Force AdGuard password change on first install
-#   [New] Interactive CLI Consent (Libertarian Opt-in)
 
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -13,7 +8,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 echo -e "${GREEN}Starting Ci5 Full Stack Installation (v7.5-HARDENED)...${NC}"
 
 # ─────────────────────────────────────────────────────────────
-# CRITICAL FIX [1]: ATOMIC ROLLBACK INFRASTRUCTURE
+# ATOMIC ROLLBACK INFRASTRUCTURE
 # ─────────────────────────────────────────────────────────────
 ROLLBACK_ENABLED=0
 BACKUP_DIR=""
@@ -178,7 +173,7 @@ set -E
 trap 'rollback_on_error' ERR
 
 # ─────────────────────────────────────────────────────────────
-# CRITICAL FIX [12]: ADGUARD PASSWORD GENERATION
+# ADGUARD PASSWORD GENERATION
 # ─────────────────────────────────────────────────────────────
 # Generate a cryptographically secure random password
 generate_secure_password() {
