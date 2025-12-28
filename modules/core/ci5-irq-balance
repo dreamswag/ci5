@@ -1,0 +1,31 @@
+#!/bin/sh
+# ═══════════════════════════════════════════════════════════════════════════
+# CI5 IRQ Balancing for USB 3.0 NICs
+# Pins USB/xHCI interrupts to performance cores on Pi5
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Detect number of CPUs
+NCPU=$(nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 4)
+
+# On Pi5: CPUs 2,3 are Cortex-A76 performance cores
+# Affinity mask 0c = CPUs 2,3 (binary: 1100)
+# On other systems with 4+ cores, use last two cores
+if [ "$NCPU" -ge 4 ]; then
+    AFFINITY="0c"
+elif [ "$NCPU" -ge 2 ]; then
+    AFFINITY="03"
+else
+    AFFINITY="01"
+fi
+
+echo "CI5 IRQ Balance: Pinning to mask $AFFINITY ($NCPU CPUs detected)"
+
+# Find USB/xHCI/Ethernet IRQs and pin them
+for irq in $(grep -E 'xhci|usb|eth|enp|ens|wlan' /proc/interrupts 2>/dev/null | cut -d: -f1 | tr -d ' '); do
+    if echo "$AFFINITY" > /proc/irq/$irq/smp_affinity 2>/dev/null; then
+        name=$(awk -F: "/^ *$irq:/ {print \$2}" /proc/interrupts | awk '{print $NF}')
+        echo "  IRQ $irq ($name) -> mask $AFFINITY"
+    fi
+done
+
+echo "Done."

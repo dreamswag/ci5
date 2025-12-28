@@ -1,0 +1,77 @@
+#!/bin/sh
+# ═══════════════════════════════════════════════════════════════════════════
+# CI5 SIMPLE SQM (CAKE)
+# Usage: ci5-sqm <interface> <download_mbps> <upload_mbps>
+# Example: ci5-sqm eth0 100 20
+# ═══════════════════════════════════════════════════════════════════════════
+
+WAN_IF="${1:-}"
+DOWN="${2:-0}"
+UP="${3:-0}"
+
+usage() {
+    cat << 'EOF'
+CI5 SQM (CAKE) — Bufferbloat Elimination
+
+Usage: ci5-sqm <interface> <download_mbps> <upload_mbps>
+
+Examples:
+  ci5-sqm eth0 100 20      # 100 Mbps down, 20 Mbps up
+  ci5-sqm eth1 500 50      # 500 Mbps down, 50 Mbps up
+  ci5-sqm wlan0 50 10      # WiFi interface
+
+Tips:
+  - Set speeds to ~95% of your actual line speed
+  - Run a speed test first to know your real speeds
+  - Test at: https://www.waveform.com/tools/bufferbloat
+
+Current qdisc on interfaces:
+EOF
+    tc qdisc show 2>/dev/null | grep -E '^qdisc' | head -10
+    exit 1
+}
+
+# Validate input
+[ -z "$WAN_IF" ] && usage
+[ "$DOWN" = "0" ] || [ "$UP" = "0" ] && usage
+
+# Check interface exists
+if [ ! -d "/sys/class/net/$WAN_IF" ]; then
+    echo "ERROR: Interface '$WAN_IF' not found"
+    echo ""
+    echo "Available interfaces:"
+    ls /sys/class/net/
+    exit 1
+fi
+
+echo "Applying CAKE SQM to $WAN_IF..."
+echo "  Download: ${DOWN} Mbps"
+echo "  Upload:   ${UP} Mbps"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Egress (upload) - apply CAKE directly to interface
+# ─────────────────────────────────────────────────────────────────────────────
+tc qdisc replace dev "$WAN_IF" root cake bandwidth "${UP}mbit" besteffort
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ingress (download) - requires IFB (Intermediate Functional Block)
+# We mirror ingress to ifb0 and apply CAKE there
+# ─────────────────────────────────────────────────────────────────────────────
+modprobe ifb 2>/dev/null || true
+ip link add ifb0 type ifb 2>/dev/null || true
+ip link set ifb0 up
+
+# Redirect ingress to ifb0
+tc qdisc replace dev "$WAN_IF" handle ffff: ingress
+tc filter replace dev "$WAN_IF" parent ffff: protocol all u32 match u32 0 0 action mirred egress redirect dev ifb0
+
+# Apply CAKE to ifb0 for ingress shaping
+tc qdisc replace dev ifb0 root cake bandwidth "${DOWN}mbit" besteffort wash
+
+echo "✓ SQM Active"
+echo ""
+echo "Verify with: tc -s qdisc show dev $WAN_IF"
+echo "Disable with: ci5-sqm-disable $WAN_IF"
+echo ""
+echo "Test bufferbloat: https://www.waveform.com/tools/bufferbloat"

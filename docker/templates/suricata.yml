@@ -1,0 +1,12 @@
+version: '3'
+services:
+  suricata:
+    image: jasonish/suricata:latest
+    container_name: suricata
+    restart: always
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - SYS_NICE
+      - NET_RAW
+    command: -i eth0  # Adjust for your Pi 5 interface

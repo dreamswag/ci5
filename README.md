@@ -1,101 +1,300 @@
-###### 📟 [ci5.run](https://github.com/dreamswag/ci5.run): curl ~ 🔬 [ci5.host](https://github.com/dreamswag/ci5.host): cure ~ 🧪 [ci5.dev](https://github.com/dreamswag/ci5.dev): cork ~ 🥼 [ci5.network](https://github.com/dreamswag/ci5.network): cert ~ 📡[ci5](https://github.com/dreamswag/ci5)🛰️
-# 📡 🛸 Raspberry-Ci5: The Net Correctional 💨 🛰️
-| **Model**             | **Price (£)** | **Latency** | **IDS Throughput** |       **Architecture**       | **Freedom?**   |
-| --------------------- | ------------- | :------------------: | :----------------: | :--------------------------: | :------------- |
-| **Pi5 OpenWrt (Ci5)** | **£130**      |  **✅ +0ms**  |   **~920 Mbps (+)**    | **Hybrid** | **🔓 Absolute** |
-| Ubiquiti UDM-SE       | £480          |     ⚠️ +3ms     |      3.5 Gbps      |          Monolithic          | 🔒 Vendor Lock  |
------
-> [!NOTE]
-> ## 📊 Realtime Response Under Load (RRUL)
-> ###### > 500/500Mbps ONT Fiber
-> ###### > USB 3.0 Gigabit NIC (WAN)
-> ###### > Packet Offloading Disabled
-> ###### > Active: (Suricata IDS + CrowdSec + Ntopng + Redis + AdGuard Home + Unbound + CAKE)
-> ----
-> ### 30s Sustained (0.2s Step):
-> ![rrul.png](images/rrul.png)
-> ----
-> ### CPU (All Cores) Utilisation Peak: 46% 
-> ![rrul_peak.jpg](images/RRUL_peak.jpg)
-> ## **Throughput 🟰 Volume ⛩️ Latency 🟰 Discipline**
->
-> **1. Network does not buckle under load:**
-> * **Status:** Saturated (500/500 Mbps)
-> * *Visual:* **Maximum throughput** (Top/Middle blocks)
->
-> **2. Traffic queued based on packet priority near-instantly:**
-> * **Jitter:** ±0.5ms (Imperceptible)
-> * *Visual:* **Near-zero latency drift** (Bottom flatline)
-> -----
-> ###### **[External Verification (Waveform)](https://www.waveform.com/tools/bufferbloat?test-id=bb0dc946-bb4e-4b63-a2e5-72f47f80040e)**
+# CI5 PHOENIX PROTOCOL — Deployment Kit
 
----
-> [!CAUTION]
-> ## 🎯 Reference Hardware Stack
-> | Component | Required | Notes |
-> |-----------|----------|-------|
-> | **Compute** | Raspberry Pi 5 (4GB / 8GB / 16GB) | **Non-negotiable** |
-> | **WAN** | USB 3.0 Gigabit NIC (RTL8153) | eth1 interface |
-> | **AP** | Netgear R7800 or VLAN-capable | Auto-config provided for R7800 |
->
-> * **Pi 5 (4GB):** Supported - Lite Stack (Full Stack may OOM).
-> * **Pi 5 (1/2GB)**: Unsupported - even Lite Stack will likely OOM.
-> * **Pi 4 (Any):** Unsupported - can't achieve documented performance.
->
-> 📚 **[Full Hardware Compatibility →](https://github.com/dreamswag/ci5.network/blob/main/docs/GOLDEN_HARDWARE.md)**
+## Overview
 
----
+This kit contains everything needed to deploy the CI5 router bootstrap system.
 
-## ⚡ Install
-**Run on Pi 5 terminal**: 
-```bash
-curl ci5.run/free | sh
 ```
-> Bootloader handles everything else.
+                    ONLINE ←───────────────→ OFFLINE
+                       │                        │
+         ECOSYSTEM     │   curl | sh    Sovereign│
+              ↑        │  Full CLI      Full CLI │
+              │        ├────────────────────────┤
+              ↓        │   Scripts     Baremetal │
+         SCRIPTS       │    Only                 │
+           ONLY        │                        │
+```
 
----
+## Directory Structure
 
-## 🏗️ Architecture
+```
+ci5-phoenix/
+├── stub/
+│   └── stub.sh                    # Main curl target (ci5.run)
+├── scripts/
+│   ├── install-recommended.sh     # [1] Full stack
+│   ├── install-minimal.sh         # [2] Bufferbloat only
+│   └── install-custom.sh          # [3] Toggle menu
+├── modules/
+│   ├── core/                      # Sysctl, IRQ, SQM
+│   ├── security/                  # Suricata, CrowdSec, Firewall
+│   ├── dns/                       # Unbound, AdGuard
+│   ├── monitoring/                # ntopng, Homepage
+│   ├── vpn/                       # WireGuard, OpenVPN
+│   └── ecosystem/                 # HWID, CLI, Corks
+├── offline/
+│   └── install-offline.sh         # Offline installer
+├── web/
+│   ├── index.html                 # ci5.run landing
+│   └── downloads/
+│       └── index.html             # ci5.run/downloads
+├── keys/                          # (Generate your own)
+└── README.md
+```
 
-**Hybrid Control Plane:** Kernel handles packets. Docker handles intelligence.
+## Deployment Checklist
 
-| Path           | Runs Where        | Job                                                | If It Crashes → Internet Impact              |
-| -------------- | ----------------- | -------------------------------------------------- | -------------------------------------------- |
-| **Fast Path**  | Bare metal kernel | Routing · NAT · CAKE SQM · BBR · Unbound           | **Still 100% up** → 0 ms latency maintained  |
-| **Smart Path** | Isolated Docker   | Suricata IDS · CrowdSec · Ntopng · Redis · AdGuard | **Still 100% up** → temporarily packet blind |
+### 1. Generate Signing Keys
 
-📚 **[Deep Dive →](https://github.com/dreamswag/ci5.network/blob/main/docs/ARCHITECTURE.md)**
+```bash
+# Generate key pair (DO THIS ONCE, keep private key SAFE)
+openssl genrsa -out ci5-private.pem 2048
+openssl rsa -in ci5-private.pem -pubout -out ci5-public.pem
 
----
+# Update stub.sh with your public key
+# Replace the CI5_PUBKEY variable
+```
 
-## 📋 Getting Started
+### 2. Sign All Scripts
 
-| Step | Action |
-|------|--------|
-| 1 | Flash Golden Image (or run `curl ci5.run/free \| sh`) |
-| 2 | Connect hardware (USB NIC → WAN, eth0 → AP) |
-| 3 | Run `sh setup.sh` |
-| 4 | Deploy stack (`install-lite.sh` or `install-full.sh`) |
+```bash
+# Sign each script
+for script in stub/stub.sh scripts/*.sh; do
+    openssl dgst -sha256 -sign ci5-private.pem -out "${script}.sig" "$script"
+done
 
-📚 **[5-Minute Quickstart →](https://github.com/dreamswag/ci5.network/blob/main/docs/QUICKSTART.md)**
+# Generate SHA256SUMS
+sha256sum stub/stub.sh scripts/*.sh > SHA256SUMS
+openssl dgst -sha256 -sign ci5-private.pem -out SHA256SUMS.sig SHA256SUMS
+```
 
----
+### 3. Deploy to ci5.run (Cloudflare Pages)
 
-## 📚 Documentation
-**Everything is located at [ci5.network/docs](https://github.com/dreamswag/ci5.network/tree/main/docs)**:
+```bash
+# Structure for Pages
+ci5.run/
+├── index.html                # from web/index.html
+├── stub.sh                   # Served as response to curl ci5.run
+├── SHA256SUMS
+├── SHA256SUMS.sig
+├── ci5-public.pem
+├── scripts/
+│   ├── install-recommended.sh
+│   ├── install-recommended.sh.sig
+│   ├── install-minimal.sh
+│   ├── install-minimal.sh.sig
+│   ├── install-custom.sh
+│   └── install-custom.sh.sig
+└── downloads/
+    └── index.html
+```
 
-| Doc | Purpose |
-|-----|---------|
-| [**QUICKSTART.md**](https://github.com/dreamswag/ci5.network/blob/main/docs/QUICKSTART.md) | 5-minute Setup |
-| [**GOLDEN_HARDWARE.md**](https://github.com/dreamswag/ci5.network/blob/main/docs/GOLDEN_HARDWARE.md) | Hardware Requirements |
-| [**ARCHITECTURE.md**](https://github.com/dreamswag/ci5.network/blob/main/docs/ARCHITECTURE.md) | Technical Deep-Dive |
-| [**MAINTENANCE.md**](https://github.com/dreamswag/ci5.network/blob/main/docs/MAINTENANCE.md) | Updates & Recovery |
+**Cloudflare Pages `_headers` file:**
+```
+/stub.sh
+  Content-Type: text/plain; charset=utf-8
+  Content-Disposition: inline
 
----
-> [!TIP]
-> ```
-> "Fuck all this Dream Machine dick-measuring contest. We all gon be dead in 100 years.
-> Let the kids have the Raspberry-Ci5 auto-installer w/ NIDs, Corks & 0ms bufferbloat"
-> ```
-> ------
-> ###### > 🌪️ **UDM Pro Funnel:** 🎪 jape.eth 🃏
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+```
+
+**Cloudflare Pages `_redirects` file:**
+```
+/ /stub.sh 200
+```
+
+This makes `curl ci5.run` return the stub directly.
+
+### 4. Build Offline Archives
+
+#### ci5-sovereign.tar.gz (Full Ecosystem Offline)
+
+```bash
+mkdir -p ci5-sovereign/{ecosystem,docker,images,modules/core,debs}
+
+# Copy scripts
+cp scripts/install-recommended.sh ci5-sovereign/
+cp offline/install-offline.sh ci5-sovereign/install.sh
+cp -r modules/core/* ci5-sovereign/modules/core/
+
+# Copy ecosystem files
+cp tools/ci5-cli ci5-sovereign/ecosystem/
+cp -r docker/ ci5-sovereign/ecosystem/docker/
+
+# Bundle Docker images (run on a machine with Docker)
+docker pull adguard/adguardhome:latest
+docker pull jasonish/suricata:latest
+docker pull crowdsecurity/crowdsec:latest
+docker pull mvance/unbound:latest
+docker pull ghcr.io/gethomepage/homepage:latest
+docker pull redis:alpine
+docker pull ntop/ntopng:stable
+
+docker save adguard/adguardhome:latest > ci5-sovereign/images/adguard.tar
+docker save jasonish/suricata:latest > ci5-sovereign/images/suricata.tar
+# ... etc
+
+# Bundle debs (for Debian/Ubuntu)
+apt-get download docker-ce docker-ce-cli containerd.io
+mv *.deb ci5-sovereign/debs/
+
+# Generate checksums
+cd ci5-sovereign
+sha256sum -r . > SHA256SUMS
+cd ..
+
+# Create archive
+tar czvf ci5-sovereign.tar.gz ci5-sovereign/
+```
+
+#### ci5-baremetal.tar.gz (Scripts Only Offline)
+
+```bash
+mkdir -p ci5-baremetal/{modules/{core,vpn,firewall,docker}}
+
+# Copy installer
+cp offline/install-offline.sh ci5-baremetal/install.sh
+
+# Copy core modules
+cat > ci5-baremetal/modules/core/99-ci5-network.conf << 'EOF'
+# (sysctl contents)
+EOF
+cp scripts/ci5-irq-balance ci5-baremetal/modules/core/
+cp scripts/ci5-sqm ci5-baremetal/modules/core/
+
+# Copy optional modules
+cp -r modules/vpn/* ci5-baremetal/modules/vpn/
+cp -r modules/firewall/* ci5-baremetal/modules/firewall/
+
+# Create AUDIT.md
+cat > ci5-baremetal/AUDIT.md << 'EOF'
+# CI5 Baremetal Audit Guide
+
+Every file in this archive is a plain text shell script.
+Audit them all before running.
+
+## File Listing
+(list all files with descriptions)
+EOF
+
+# Checksums
+cd ci5-baremetal
+sha256sum -r . > SHA256SUMS
+cd ..
+
+tar czvf ci5-baremetal.tar.gz ci5-baremetal/
+```
+
+### 5. Upload to GitHub Releases
+
+```bash
+# Create release
+gh release create v1.0.0 \
+    ci5-sovereign.tar.gz \
+    ci5-baremetal.tar.gz \
+    ci5-scripts.tar.gz \
+    ci5-full.tar.gz \
+    --title "CI5 Phoenix v1.0.0" \
+    --notes "Initial release"
+```
+
+### 6. Deploy ci5.host (Optional Mirror)
+
+For large files (images, sovereign pack), consider Cloudflare R2:
+
+```bash
+# Upload to R2
+wrangler r2 object put ci5-files/ci5-sovereign.tar.gz --file ci5-sovereign.tar.gz
+```
+
+## User Flows
+
+### Flow 1: One-Line Install (Most Users)
+```bash
+curl -fsSL https://ci5.run | sh
+# Select [1], [2], or [3]
+# Done
+```
+
+### Flow 2: Audit First (Paranoid)
+```bash
+curl -fsSL https://ci5.run -o stub.sh
+cat stub.sh
+sha256sum stub.sh
+# Compare hash to GitHub
+sh stub.sh
+```
+
+### Flow 3: Offline Install (Airgapped)
+```bash
+# On internet machine:
+wget https://github.com/dreamswag/ci5/releases/latest/download/ci5-sovereign.tar.gz
+
+# Transfer to airgapped Pi via USB
+
+# On Pi:
+tar xzf ci5-sovereign.tar.gz
+cd ci5-sovereign
+sudo ./install.sh
+```
+
+### Flow 4: Minimal Schizo (Just Bufferbloat)
+```bash
+curl -fsSL https://ci5.run | sh
+# Select [2]
+# Done in 30 seconds
+# No Docker, no services, no ecosystem
+```
+
+## Component Reference
+
+| Component | RAM | Default | Purpose |
+|-----------|-----|---------|---------|
+| sysctl tuning | 0 | Always | TCP/UDP buffers, BBR |
+| IRQ balancing | 0 | Always | USB NIC optimization |
+| SQM/CAKE | ~10MB | Always | Bufferbloat fix |
+| Suricata | ~500MB | Recommended | IDS/IPS |
+| CrowdSec | ~100MB | Recommended | Threat intel |
+| Unbound | ~50MB | Recommended | Local DNS |
+| AdGuard Home | ~100MB | Recommended | DNS filtering |
+| ntopng | ~300MB | Recommended | Traffic analysis |
+| Homepage | ~100MB | Recommended | Dashboard |
+| ci5 CLI | ~50MB | Ecosystem | Cork management |
+
+## Verification
+
+All scripts are signed. Users can verify:
+
+```bash
+# Download public key
+curl -fsSL https://ci5.run/ci5-public.pem -o ci5.pub
+
+# Verify signature
+openssl dgst -sha256 -verify ci5.pub -signature script.sh.sig script.sh
+```
+
+## Testing
+
+Before release, test all paths:
+
+1. `curl ci5.run | sh` → Option 1 → Full stack works
+2. `curl ci5.run | sh` → Option 2 → Minimal works
+3. `curl ci5.run | sh` → Option 3 → Custom toggles work
+4. Sovereign tarball → Offline install works
+5. Baremetal tarball → Scripts-only works
+6. Signature verification → All pass
+
+## Maintenance
+
+### Updating Scripts
+1. Edit script
+2. Re-sign: `openssl dgst -sha256 -sign ci5-private.pem -out script.sh.sig script.sh`
+3. Update SHA256SUMS
+4. Push to GitHub → ci5.run auto-deploys
+
+### Updating Docker Images
+1. Rebuild sovereign archive with new images
+2. Create new GitHub release
+3. Update download links if versioned
