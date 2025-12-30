@@ -78,9 +78,8 @@ download_verified() {
     
     info "Downloading $name..."
     curl -fsSL "$url" -o "$dest" || die "Failed to download $name"
-    curl -fsSL "${url}.sig" -o "${dest}.sig" 2>/dev/null || {
-        warn "No signature found for $name - UNVERIFIED"
-        return 0
+    curl -fsSL "${url}.sig" -o "${dest}.sig" || {
+        die "SECURITY FAIL: Signature missing for $name. release build requires verification."
     }
     
     info "Verifying $name signature..."
@@ -448,6 +447,17 @@ check_requirements() {
     [ "$(id -u)" -eq 0 ] || die "Must run as root"
     command -v curl >/dev/null 2>&1 || die "curl not found"
     command -v openssl >/dev/null 2>&1 || die "openssl not found"
+    # Auto-install jq for state tracking
+    if ! command -v jq >/dev/null 2>&1; then
+        warn "jq missing (required for state tracking). Attempting install..."
+        if [ -f /etc/openwrt_release ]; then
+            opkg update && opkg install jq
+        elif [ -f /etc/debian_version ]; then
+            apt-get update -qq && apt-get install -y -qq jq
+        else
+            warn "Could not install jq. State tracking may fail."
+        fi
+    fi
 }
 
 main() {
