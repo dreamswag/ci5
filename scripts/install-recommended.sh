@@ -1,6 +1,6 @@
 #!/bin/sh
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  CI5 PHOENIX — RECOMMENDED STACK INSTALLER                                ║
+# ║  CI5 PHOENIX — RECOMMENDED STACK INSTALLER (RELEASE CANDIDATE)            ║
 # ║  Full router + security + monitoring suite                                ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
@@ -340,10 +340,78 @@ init_identity() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CONFIG INJECTION (CRITICAL FIX)
+# ─────────────────────────────────────────────────────────────────────────────
+inject_configs() {
+    info "Injecting default service configurations..."
+    
+    # Create structure
+    mkdir -p /opt/ci5/docker/{suricata,crowdsec,adguard,unbound,redis,ntopng,homepage}
+    mkdir -p /opt/ci5/docker/suricata/{logs,rules}
+    mkdir -p /opt/ci5/docker/crowdsec/{config,data}
+    mkdir -p /opt/ci5/docker/unbound
+    
+    # 1. Unbound Config
+    if [ ! -f /opt/ci5/docker/unbound/unbound.conf ]; then
+        cat > /opt/ci5/docker/unbound/unbound.conf << 'EOF'
+server:
+    verbosity: 1
+    interface: 0.0.0.0
+    port: 53
+    do-ip4: yes
+    do-udp: yes
+    do-tcp: yes
+    access-control: 0.0.0.0/0 allow
+    root-hints: "/opt/unbound/etc/unbound/root.hints"
+EOF
+    fi
+
+    # 2. Suricata Config
+    if [ ! -f /opt/ci5/docker/suricata/suricata.yaml ]; then
+        cat > /opt/ci5/docker/suricata/suricata.yaml << 'EOF'
+vars:
+  address-groups:
+    HOME_NET: "[192.168.0.0/16,10.0.0.0/8,172.16.0.0/12]"
+    EXTERNAL_NET: "!$HOME_NET"
+af-packet:
+  - interface: eth0
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+outputs:
+  - fast:
+      enabled: yes
+      filename: fast.log
+      append: yes
+  - eve-log:
+      enabled: yes
+      filename: eve.json
+      types:
+        - alert
+        - dns
+        - http
+EOF
+    fi
+
+    # 3. CrowdSec Acquisition
+    if [ ! -f /opt/ci5/docker/crowdsec/acquis.yaml ]; then
+        cat > /opt/ci5/docker/crowdsec/acquis.yaml << 'EOF'
+filenames:
+  - /var/log/suricata/eve.json
+labels:
+  type: suricata
+EOF
+    fi
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MODULE: SECURITY STACK
 # ─────────────────────────────────────────────────────────────────────────────
 install_security_stack() {
     step "SECURITY STACK"
+    
+    # Inject Configs BEFORE starting Docker
+    inject_configs
     
     mkdir -p /opt/ci5/docker
     
@@ -370,7 +438,7 @@ services:
       - SYS_NICE
     volumes:
       - ./suricata/logs:/var/log/suricata
-      - ./suricata/rules:/var/lib/suricata/rules
+      - ./suricata/suricata.yaml:/etc/suricata/suricata.yaml
     command: -i eth0
     restart: unless-stopped
 
@@ -384,10 +452,10 @@ services:
       - ci5_net
     volumes:
       - ./crowdsec/config:/etc/crowdsec
-      - ./crowdsec/data:/var/lib/crowdsec/data
-      - /var/log:/var/log:ro
+      - ./crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml
+      - ./suricata/logs:/var/log/suricata:ro
     environment:
-      - COLLECTIONS=crowdsecurity/linux crowdsecurity/iptables crowdsecurity/sshd
+      - COLLECTIONS=crowdsecurity/linux crowdsecurity/sshd
     restart: unless-stopped
 
   # ─────────────────────────────────────────────────
@@ -418,7 +486,7 @@ services:
       ci5_net:
         ipv4_address: 172.30.0.54
     volumes:
-      - ./unbound:/opt/unbound/etc/unbound
+      - ./unbound/unbound.conf:/opt/unbound/etc/unbound/unbound.conf
     restart: unless-stopped
 
   # ─────────────────────────────────────────────────
@@ -468,9 +536,6 @@ COMPOSE
     
     info "Docker compose file created"
     
-    # Create config directories
-    mkdir -p /opt/ci5/docker/{suricata/{logs,rules},crowdsec/{config,data},adguard/{work,conf},unbound,redis,ntopng,homepage}
-    
     # AdGuard initial config
     cat > /opt/ci5/docker/adguard/conf/AdGuardHome.yaml << 'ADGUARD'
 bind_host: 0.0.0.0
@@ -511,6 +576,7 @@ HOMEPAGE
     
     # Start services
     cd /opt/ci5/docker
+    info "Pulling images..."
     docker compose pull
     
     if [ "$SKIP_NTOPNG" = "1" ]; then
