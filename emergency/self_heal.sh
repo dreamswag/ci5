@@ -33,8 +33,8 @@ LOG_FILE="/tmp/ci5-heal-$(date +%Y%m%d_%H%M%S).log"
 
 # Core files to verify (relative to CI5_BASE)
 CORE_FILES="
-install-lite.sh
-install-full.sh
+scripts/install-minimal.sh
+scripts/install-recommended.sh
 setup.sh
 validate.sh
 preflight.sh
@@ -370,7 +370,7 @@ main() {
     echo ""
     log_err "Some files could not be repaired"
     log_info "Options:"
-    log_info "  1. Run 'sh $CI5_BASE/install-lite.sh' to reinstall"
+    log_info "  1. Run 'sh $CI5_BASE/scripts/install-minimal.sh' to reinstall"
     log_info "  2. Restore from backup: $BACKUP_DIR"
     log_info "  3. Check log: $LOG_FILE"
     exit 1

@@ -235,13 +235,6 @@ check_services() {
             fi
         fi
         
-        # Check systemd
-        if command -v systemctl >/dev/null 2>&1; then
-            if systemctl is-active "$svc" >/dev/null 2>&1; then
-                continue
-            fi
-        fi
-        
         # Check procd (OpenWrt)
         if [ -f "/etc/init.d/$svc" ]; then
             if /etc/init.d/$svc status >/dev/null 2>&1; then
@@ -367,36 +360,31 @@ sleep 30
 # Get system info
 UPTIME=$(uptime -p 2>/dev/null || uptime | awk '{print $3,$4}')
 IP=$(ip route get 1 2>/dev/null | awk '{print $7; exit}')
-HOSTNAME=$(hostname)
+HOTNAME=$(hostname)
 
 /usr/local/bin/ci5-notify "🔄 System Reboot" "$HOSTNAME is online\nIP: $IP\n$UPTIME" "low" "computer"
 BOOT
     chmod +x /usr/local/bin/ci5-boot-notify
     
-    # Add to rc.local or systemd
-    if [ -f /etc/rc.local ]; then
-        grep -q 'ci5-boot-notify' /etc/rc.local || \
-            sed -i '/^exit 0/i /usr/local/bin/ci5-boot-notify &' /etc/rc.local
-        info "Added to /etc/rc.local"
-    elif [ -d /etc/systemd/system ]; then
-        cat > /etc/systemd/system/ci5-boot-notify.service << 'SYSTEMD'
-[Unit]
-Description=CI5 Boot Notification
-After=network-online.target
-Wants=network-online.target
+    # Create Procd init script
+    cat > /etc/init.d/ci5-boot-notify << 'PROCD'
+#!/bin/sh /etc/rc.common
+START=99
+STOP=10
+USE_PROCD=1
 
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/ci5-boot-notify
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-SYSTEMD
-        systemctl daemon-reload
-        systemctl enable ci5-boot-notify
-        info "Systemd service enabled"
-    fi
+start_service() {
+    procd_open_instance
+    procd_set_param command /usr/local/bin/ci5-boot-notify
+    procd_set_param stdout 1
+    procd_set_param stderr 1
+    procd_close_instance
+}
+PROCD
+    chmod +x /etc/init.d/ci5-boot-notify
+    /etc/init.d/ci5-boot-notify enable
+    /etc/init.d/ci5-boot-notify start
+    info "Procd service enabled"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -434,7 +422,7 @@ send_test() {
         printf "  Check your phone for the notification.\n"
         printf "  Topic: ${C}${NTFY_TOPIC}${N}\n"
         printf "\n"
-        printf "  If you didn't receive it:\n"
+        printf "  If you didn\'t receive it:\n"
         printf "    1. Open ntfy.sh app on your phone\n"
         printf "    2. Subscribe to topic: ${C}${NTFY_TOPIC}${N}\n"
         printf "    3. Run: ${C}curl ci5.run/alert | sh -s test${N}\n"
@@ -491,12 +479,12 @@ do_uninstall() {
     rm -f "$NTFY_SCRIPT" "$MONITOR_SCRIPT" /usr/local/bin/ci5-boot-notify
     info "Removed scripts"
     
-    # Remove systemd service
-    if [ -f /etc/systemd/system/ci5-boot-notify.service ]; then
-        systemctl disable ci5-boot-notify 2>/dev/null || true
-        rm -f /etc/systemd/system/ci5-boot-notify.service
-        systemctl daemon-reload
-        info "Removed systemd service"
+    # Remove Procd service
+    if [ -f /etc/init.d/ci5-boot-notify ]; then
+        /etc/init.d/ci5-boot-notify stop 2>/dev/null || true
+        /etc/init.d/ci5-boot-notify disable 2>/dev/null || true
+        rm -f /etc/init.d/ci5-boot-notify
+        info "Removed init script"
     fi
     
     # Remove from rc.local

@@ -72,7 +72,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # TARGET INSTALLER (set at build time, do not modify manually)
 # ─────────────────────────────────────────────────────────────────────────────
-readonly TARGET_INSTALLER="install-full.sh"
+readonly TARGET_INSTALLER="install-minimal.sh"
 
 PARANOID=0 OFFLINE=0 VERBOSE=0 INSTALLER="$TARGET_INSTALLER"
 
@@ -81,8 +81,8 @@ for arg in "$@"; do
         --paranoid) PARANOID=1 ;;
         --offline)  OFFLINE=1 ;;
         --verbose)  VERBOSE=1 ;;
-        --full)     INSTALLER="install-full.sh" ;;
-        --lite)     INSTALLER="install-lite.sh" ;;
+        --full)     INSTALLER="install-recommended.sh" ;;
+        --lite)     INSTALLER="install-minimal.sh" ;;
         --help|-h)  printf 'CI5 Verified Installer\n'
                     printf 'Target: %s\n' "$TARGET_INSTALLER"
                     printf 'Options: --paranoid --offline --verbose --full --lite\n'

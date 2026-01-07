@@ -1,0 +1,14 @@
+#!/bin/sh /etc/rc.common
+START=99
+
+boot() {
+    if [ -f /boot/ci5-init/.first_run_pending ]; then
+        logger -t ci5 "First boot: absorbing soul configuration"
+        if [ -x /root/ci5/scripts/first-boot/absorb-soul.sh ]; then
+            /root/ci5/scripts/first-boot/absorb-soul.sh
+        else
+            logger -t ci5 "Error: absorb-soul.sh not found or not executable"
+        fi
+        rm -f /boot/ci5-init/.first_run_pending
+    fi
+}

@@ -7,6 +7,15 @@
 #        curl ci5.run/tailscale | sh -s -- --status
 #        curl ci5.run/tailscale | sh -s -- --exit-node
 
+# Law 1: BCM2712 Hardware Lock
+if ! grep -q "Raspberry Pi 5" /proc/cpuinfo; then
+    echo "FATAL: CI5 requires BCM2712 (Pi 5) hardware."
+    exit 1
+fi
+
+# Law 5: The Soul Configuration
+[ -f "/root/ci5/ci5.config" ] && . /root/ci5/ci5.config
+
 set -e
 
 # ═══════════════════════════════════════════════════════════════════
@@ -83,7 +92,8 @@ is_tailscale_running() {
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^tailscale$"; then
         return 0
     fi
-    if pgrep -x tailscaled >/dev/null 2>&1; then
+    if pgrep -x tailscaled >/dev/null 2>&1;
+ then
         return 0
     fi
     return 1
@@ -116,10 +126,11 @@ preflight_check() {
     fi
     
     # Detect platform
-    if is_openwrt; then
+    if is_openwrt;
+ then
         log_ok "OpenWrt detected"
     else
-        log_warn "Non-OpenWrt system - using generic Linux mode"
+        log_warn "Non-OpenWrt system - proceeding with caution"
     fi
     
     # Detect stack mode
@@ -133,29 +144,18 @@ preflight_check() {
 install_native() {
     log_info "Installing Tailscale (native binary)..."
     
-    if is_openwrt; then
-        # OpenWrt package installation
-        opkg update
-        opkg install tailscale
-        
-        # Enable and start service
-        /etc/init.d/tailscale enable
-        /etc/init.d/tailscale start
-        
-        # Wait for daemon
-        sleep 3
-        
-        log_ok "Tailscale daemon started"
-    else
-        # Generic Linux - use official install script
-        curl -fsSL https://tailscale.com/install.sh | sh
-        
-        systemctl enable tailscaled
-        systemctl start tailscaled
-        
-        sleep 3
-        log_ok "Tailscale daemon started"
-    fi
+    # OpenWrt package installation
+    opkg update
+    opkg install tailscale
+    
+    # Enable and start service
+    /etc/init.d/tailscale enable
+    /etc/init.d/tailscale start
+    
+    # Wait for daemon
+    sleep 3
+    
+    log_ok "Tailscale daemon started"
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -266,7 +266,8 @@ configure_exit_node() {
     sysctl -w net.ipv6.conf.all.forwarding=1
     
     # Persist
-    if is_openwrt; then
+    if is_openwrt;
+ then
         uci set network.globals.ula_prefix="$(uci get network.globals.ula_prefix 2>/dev/null || echo 'fd00::/48')"
         uci commit network
     else
@@ -328,49 +329,39 @@ configure_subnet_routing() {
 configure_firewall() {
     log_info "Configuring firewall for Tailscale..."
     
-    if is_openwrt; then
-        # Create tailscale zone
-        uci -q delete firewall.tailscale
-        uci set firewall.tailscale=zone
-        uci set firewall.tailscale.name='tailscale'
-        uci set firewall.tailscale.input='ACCEPT'
-        uci set firewall.tailscale.output='ACCEPT'
-        uci set firewall.tailscale.forward='ACCEPT'
-        uci set firewall.tailscale.masq='1'
-        uci add_list firewall.tailscale.network='tailscale'
-        
-        # Create interface for tailscale
-        uci -q delete network.tailscale
-        uci set network.tailscale=interface
-        uci set network.tailscale.proto='none'
-        uci set network.tailscale.device='tailscale0'
-        
-        # Allow tailscale -> lan forwarding
-        uci add firewall forwarding
-        uci set firewall.@forwarding[-1].src='tailscale'
-        uci set firewall.@forwarding[-1].dest='lan'
-        
-        # Allow lan -> tailscale forwarding
-        uci add firewall forwarding
-        uci set firewall.@forwarding[-1].src='lan'
-        uci set firewall.@forwarding[-1].dest='tailscale'
-        
-        uci commit firewall
-        uci commit network
-        
-        /etc/init.d/network reload
-        /etc/init.d/firewall reload
-        
-        log_ok "OpenWrt firewall configured"
-    else
-        # Generic iptables
-        iptables -I INPUT -i tailscale0 -j ACCEPT
-        iptables -I FORWARD -i tailscale0 -j ACCEPT
-        iptables -I FORWARD -o tailscale0 -j ACCEPT
-        iptables -t nat -I POSTROUTING -o tailscale0 -j MASQUERADE
-        
-        log_ok "iptables rules added"
-    fi
+    # Create tailscale zone
+    uci -q delete firewall.tailscale
+    uci set firewall.tailscale=zone
+    uci set firewall.tailscale.name='tailscale'
+    uci set firewall.tailscale.input='ACCEPT'
+    uci set firewall.tailscale.output='ACCEPT'
+    uci set firewall.tailscale.forward='ACCEPT'
+    uci set firewall.tailscale.masq='1'
+    uci add_list firewall.tailscale.network='tailscale'
+    
+    # Create interface for tailscale
+    uci -q delete network.tailscale
+    uci set network.tailscale=interface
+    uci set network.tailscale.proto='none'
+    uci set network.tailscale.device='tailscale0'
+    
+    # Allow tailscale -> lan forwarding
+    uci add firewall forwarding
+    uci set firewall.@forwarding[-1].src='tailscale'
+    uci set firewall.@forwarding[-1].dest='lan'
+    
+    # Allow lan -> tailscale forwarding
+    uci add firewall forwarding
+    uci set firewall.@forwarding[-1].src='lan'
+    uci set firewall.@forwarding[-1].dest='tailscale'
+    
+    uci commit firewall
+    uci commit network
+    
+    /etc/init.d/network reload
+    /etc/init.d/firewall reload
+    
+    log_ok "OpenWrt firewall configured"
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -387,7 +378,8 @@ show_status() {
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^tailscale$"; then
         TS_CMD="docker exec tailscale tailscale"
         log_info "Mode: Docker container"
-    elif pgrep -x tailscaled >/dev/null 2>&1; then
+    elif pgrep -x tailscaled >/dev/null 2>&1;
+ then
         log_info "Mode: Native daemon"
     else
         log_err "Tailscale is not running"
@@ -425,24 +417,16 @@ remove_tailscale() {
     fi
     
     # Native removal
-    if is_openwrt; then
-        if opkg list-installed | grep -q tailscale; then
-            /etc/init.d/tailscale stop 2>/dev/null
-            /etc/init.d/tailscale disable 2>/dev/null
-            opkg remove tailscale tailscaled 2>/dev/null
-            log_ok "OpenWrt package removed"
-        fi
-    else
-        if command -v tailscale >/dev/null 2>&1; then
-            systemctl stop tailscaled 2>/dev/null
-            systemctl disable tailscaled 2>/dev/null
-            # Note: Package removal varies by distro
-            log_warn "Run 'apt remove tailscale' or equivalent to complete removal"
-        fi
+    if opkg list-installed | grep -q tailscale; then
+        /etc/init.d/tailscale stop 2>/dev/null
+        /etc/init.d/tailscale disable 2>/dev/null
+        opkg remove tailscale tailscaled 2>/dev/null
+        log_ok "OpenWrt package removed"
     fi
     
     # Remove firewall rules
-    if is_openwrt; then
+    if is_openwrt;
+ then
         uci -q delete firewall.tailscale
         uci -q delete network.tailscale
         uci commit firewall
@@ -484,38 +468,38 @@ main() {
             --help|-h)
                 show_help
                 exit 0
-                ;;
+                ;; 
             --remove|--uninstall)
                 MODE="remove"
-                ;;
+                ;; 
             --status)
                 MODE="status"
-                ;;
+                ;; 
             --exit-node)
                 MODE="exit-node"
-                ;;
+                ;; 
             --subnet|--subnets)
                 MODE="subnet"
-                ;;
+                ;; 
             --docker)
                 USE_DOCKER="yes"
-                ;;
+                ;; 
             --native)
                 USE_DOCKER="no"
-                ;;
+                ;; 
             --authkey)
                 shift
                 AUTH_KEY="$1"
-                ;;
+                ;; 
             --accept-routes)
                 EXTRA_ARGS="$EXTRA_ARGS --accept-routes"
-                ;;
+                ;; 
             --accept-dns)
                 EXTRA_ARGS="$EXTRA_ARGS --accept-dns=false"
-                ;;
+                ;; 
             *)
                 log_warn "Unknown option: $1"
-                ;;
+                ;; 
         esac
         shift
     done
@@ -525,11 +509,11 @@ main() {
         remove)
             remove_tailscale
             exit 0
-            ;;
+            ;; 
         status)
             show_status
             exit $?
-            ;;
+            ;; 
         exit-node)
             if ! is_tailscale_running; then
                 log_err "Tailscale is not running. Install first."
@@ -537,7 +521,7 @@ main() {
             fi
             configure_exit_node
             exit 0
-            ;;
+            ;; 
         subnet)
             if ! is_tailscale_running; then
                 log_err "Tailscale is not running. Install first."
@@ -545,7 +529,7 @@ main() {
             fi
             configure_subnet_routing
             exit 0
-            ;;
+            ;; 
     esac
     
     # Preflight

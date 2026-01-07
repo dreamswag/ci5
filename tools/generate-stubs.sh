@@ -22,15 +22,15 @@ fi
 
 echo "[*] Generating verification stubs from template..."
 
-# Generate Full stub
-sed 's|__TARGET_INSTALLER_PLACEHOLDER__|install-full.sh|g' "$TEMPLATE" > "$OUTPUT_FULL"
+# Generate Full stub (maps to install-recommended.sh)
+sed 's|__TARGET_INSTALLER_PLACEHOLDER__|install-recommended.sh|g' "$TEMPLATE" > "$OUTPUT_FULL"
 chmod +x "$OUTPUT_FULL"
-echo "[✓] Generated: verify-stub-full.sh"
+echo "[✓] Generated: verify-stub-full.sh → install-recommended.sh"
 
-# Generate Lite stub
-sed 's|__TARGET_INSTALLER_PLACEHOLDER__|install-lite.sh|g' "$TEMPLATE" > "$OUTPUT_LITE"
+# Generate Lite stub (maps to install-minimal.sh)
+sed 's|__TARGET_INSTALLER_PLACEHOLDER__|install-minimal.sh|g' "$TEMPLATE" > "$OUTPUT_LITE"
 chmod +x "$OUTPUT_LITE"
-echo "[✓] Generated: verify-stub-lite.sh"
+echo "[✓] Generated: verify-stub-lite.sh → install-minimal.sh"
 
 # Compute hashes for verification
 HASH_FULL=$(sha256sum "$OUTPUT_FULL" | cut -d' ' -f1)

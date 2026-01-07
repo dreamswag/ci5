@@ -114,18 +114,15 @@ SERVICES="example-cork.service example-cork.timer"
 
 cleanup_services() {
     for service in $SERVICES; do
-        if systemctl list-unit-files | grep -q "$service"; then
+        if [ -x "/etc/init.d/$service" ]; then
             info "Disabling service: $service"
-            systemctl stop "$service" 2>/dev/null || true
-            systemctl disable "$service" 2>/dev/null || true
+            /etc/init.d/"$service" stop 2>/dev/null || true
+            /etc/init.d/"$service" disable 2>/dev/null || true
         fi
         
-        # Remove unit files
-        rm -f "/etc/systemd/system/$service"
-        rm -f "/usr/lib/systemd/system/$service"
+        # Remove init scripts
+        rm -f "/etc/init.d/$service"
     done
-    
-    systemctl daemon-reload
 }
 
 cleanup_services

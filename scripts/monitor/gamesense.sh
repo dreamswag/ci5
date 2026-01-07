@@ -317,7 +317,7 @@ start_learning() {
             case "$dst" in
                 192.168.*|10.*|172.1[6-9].*|172.2[0-9].*|172.3[0-1].*|127.*)
                     continue
-                    ;;
+                    ;; 
             esac
             
             # Add if not already in list
@@ -523,7 +523,7 @@ apply_bypass_rules() {
         case "$line" in
             \#*|"") continue ;;
         esac
-        
+
         # Check if it's a CIDR range or single IP
         if echo "$line" | grep -qE '/[0-9]+$'; then
             # CIDR range
@@ -620,7 +620,9 @@ enable_overclock() {
     
     # Mark packets TO game servers (upload: your inputs)
     while read -r line; do
-        case "$line" in \#*|"") continue ;; esac
+        case "$line" in
+            \#*|"") continue ;;
+        esac
         
         if echo "$line" | grep -qE '/[0-9]+$'; then
             # CIDR range
@@ -642,7 +644,9 @@ enable_overclock() {
     
     # Mark packets FROM game servers (download: game state)
     while read -r line; do
-        case "$line" in \#*|"") continue ;; esac
+        case "$line" in
+            \#*|"") continue ;;
+        esac
         
         if echo "$line" | grep -qE '/[0-9]+$'; then
             iptables -t mangle -A GAMESENSE_ANTILAG -s "$line" -j DSCP --set-dscp "$GAME_DSCP"
@@ -834,7 +838,7 @@ enable_overclock() {
     # Show live stats command
     printf "  Monitor game traffic:\n"
     printf "    ${C}watch -n1 'tc -s qdisc show dev %s'${N}\n" "$wan_if"
-    printf "    ${C}iptables -t mangle -L GAMESENSE_ANTILAG -v${N}\n"
+    printf "    ${C}iptables -t mangle -L GAMESENSE_ANTILAG -v${N}"
     printf "\n"
 }
 
@@ -1236,12 +1240,11 @@ main() {
     # Check dependencies
     command -v tcpdump >/dev/null 2>&1 || command -v tshark >/dev/null 2>&1 || {
         warn "tcpdump not found, installing..."
-        if command -v opkg >/dev/null 2>&1; then
+        if command -v opkg >/dev/null 2>&1;
+        then
             opkg update && opkg install tcpdump
-        elif command -v apt-get >/dev/null 2>&1; then
-            apt-get update && apt-get install -y tcpdump
         else
-            err "Please install tcpdump: apt install tcpdump"
+            err "Please install tcpdump: opkg install tcpdump"
         fi
     }
     
@@ -1273,13 +1276,13 @@ main() {
             case "${2:-}" in
                 on|enable|1)
                     enable_overclock
-                    ;;
+                    ;; 
                 off|disable|0)
                     disable_overclock
-                    ;;
+                    ;; 
                 stats|status)
                     show_overclock_stats
-                    ;;
+                    ;; 
                 *)
                     # Toggle
                     if is_overclock_active; then
@@ -1287,24 +1290,24 @@ main() {
                     else
                         enable_overclock
                     fi
-                    ;;
+                    ;; 
             esac
-            ;;
+            ;; 
         status)
             show_status
-            ;;
+            ;; 
         profiles)
             list_profiles
-            ;;
+            ;; 
         show)
             show_learned "$2"
-            ;;
+            ;; 
         help|--help|-h)
             usage
-            ;;
+            ;; 
         *)
             interactive_menu
-            ;;
+            ;; 
     esac
 }
 

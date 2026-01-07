@@ -1185,63 +1185,29 @@ GPIO_PIN2=$pin2
 GPIO_HOLD_TIME=$hold_time
 EOF
 
-    # Create GPIO monitor service
-    cat > /etc/systemd/system/ci5-gpio-trigger.service << EOF
-[Unit]
-Description=CI5 GPIO Trigger Monitor
-After=multi-user.target
+    # Create Procd init script for GPIO monitor
+    cat > /etc/init.d/ci5-gpio-trigger << 'PROCD'
+#!/bin/sh /etc/rc.common
 
-[Service]
-Type=simple
-ExecStart=$TRIGGERS_DIR/gpio_monitor.sh
-Restart=always
+START=99
+STOP=10
+USE_PROCD=1
 
-[Install]
-WantedBy=multi-user.target
-EOF
+PROG=/etc/ci5/triggers/gpio_monitor.sh
 
-    # Create monitor script
-    cat > "$TRIGGERS_DIR/gpio_monitor.sh" << 'GPIOMONITOR'
-#!/bin/sh
-# CI5 GPIO Trigger Monitor
-
-. /etc/ci5/triggers/gpio.conf
-
-# Export GPIO pins
-echo "$GPIO_PIN1" > /sys/class/gpio/export 2>/dev/null || true
-echo "$GPIO_PIN2" > /sys/class/gpio/export 2>/dev/null || true
-
-# Set as input with pull-up
-echo "in" > /sys/class/gpio/gpio${GPIO_PIN1}/direction
-echo "in" > /sys/class/gpio/gpio${GPIO_PIN2}/direction
-
-while true; do
-    # Check if both pins are LOW (shorted to ground)
-    VAL1=$(cat /sys/class/gpio/gpio${GPIO_PIN1}/value)
-    VAL2=$(cat /sys/class/gpio/gpio${GPIO_PIN2}/value)
+start_service() {
+    procd_open_instance
+    procd_set_param command "$PROG"
+    procd_set_param respawn 3600 5 5
+    procd_set_param stdout 1
+    procd_set_param stderr 1
+    procd_close_instance
+}
+PROCD
+    chmod +x /etc/init.d/ci5-gpio-trigger
     
-    if [ "$VAL1" = "0" ] && [ "$VAL2" = "0" ]; then
-        # Wait for hold time
-        sleep "$GPIO_HOLD_TIME"
-        
-        # Check again
-        VAL1=$(cat /sys/class/gpio/gpio${GPIO_PIN1}/value)
-        VAL2=$(cat /sys/class/gpio/gpio${GPIO_PIN2}/value)
-        
-        if [ "$VAL1" = "0" ] && [ "$VAL2" = "0" ]; then
-            logger "CI5: GPIO trigger activated"
-            /etc/ci5/triggers/unlock_hidden.sh
-            touch /tmp/.ci5_unlocked
-        fi
-    fi
-    
-    sleep 0.5
-done
-GPIOMONITOR
-    chmod +x "$TRIGGERS_DIR/gpio_monitor.sh"
-    
-    systemctl daemon-reload
-    systemctl enable ci5-gpio-trigger.service
+    /etc/init.d/ci5-gpio-trigger enable
+    /etc/init.d/ci5-gpio-trigger start
     
     info "GPIO trigger configured: pins $pin1 + $pin2 (hold ${hold_time}s)"
     warn "Short pins $pin1 and $pin2 together for ${hold_time} seconds to unlock"

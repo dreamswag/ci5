@@ -313,8 +313,8 @@ enable_focus() {
         resolvectl flush-caches 2>/dev/null || true
     fi
     # For dnsmasq (common on Pi routers)
-    if systemctl is-active dnsmasq >/dev/null 2>&1; then
-        systemctl restart dnsmasq 2>/dev/null || killall -HUP dnsmasq 2>/dev/null || true
+    if [ -x /etc/init.d/dnsmasq ]; then
+        /etc/init.d/dnsmasq restart
     fi
     
     # Save end time
@@ -388,8 +388,8 @@ disable_focus() {
     if command -v resolvectl >/dev/null 2>&1; then
         resolvectl flush-caches 2>/dev/null || true
     fi
-    if systemctl is-active dnsmasq >/dev/null 2>&1; then
-        systemctl restart dnsmasq 2>/dev/null || killall -HUP dnsmasq 2>/dev/null || true
+    if [ -x /etc/init.d/dnsmasq ]; then
+        /etc/init.d/dnsmasq restart
     fi
     
     info "Focus mode disabled"

@@ -151,18 +151,25 @@ check_container() {
 kill_wan() {
     log "CRITICAL: IDS container '\$CONTAINER' down for \${THRESHOLD}+ checks - KILLING WAN"
     
-    # Method 1: Bring interface down via UCI
+    # Method 1: Bring interface down via UCI/netifd
     ifdown wan 2>/dev/null || true
     
     # Method 2: Force link down
     ip link set "\$WAN_IF" down 2>/dev/null || true
     
-    # Method 3: Block all forwarded traffic
-    iptables -I FORWARD -o "\$WAN_IF" -j DROP 2>/dev/null || true
-    iptables -I OUTPUT -o "\$WAN_IF" -j DROP 2>/dev/null || true
-    
-    # Method 4: Block at raw table (hardest to bypass)
-    iptables -t raw -I OUTPUT -o "\$WAN_IF" -j DROP 2>/dev/null || true
+    # Method 3: Block via nftables (Dedicated Table)
+    if command -v nft >/dev/null 2>&1; then
+        # Create separate table for clean handling
+        nft add table inet ci5_paranoia 2>/dev/null || true
+        
+        # Hook forward (traffic passing through router)
+        nft add chain inet ci5_paranoia block_fwd { type filter hook forward priority 0; policy accept; }
+        nft add rule inet ci5_paranoia block_fwd oifname "\$WAN_IF" drop
+        
+        # Hook output (traffic from router)
+        nft add chain inet ci5_paranoia block_out { type filter hook output priority 0; policy accept; }
+        nft add rule inet ci5_paranoia block_out oifname "\$WAN_IF" drop
+    fi
     
     echo "KILLED" > "\$STATE_FILE"
     log "WAN interface '\$WAN_IF' terminated"
@@ -171,10 +178,10 @@ kill_wan() {
 restore_wan() {
     log "IDS container '\$CONTAINER' recovered - restoring WAN"
     
-    # Remove blocks
-    iptables -D FORWARD -o "\$WAN_IF" -j DROP 2>/dev/null || true
-    iptables -D OUTPUT -o "\$WAN_IF" -j DROP 2>/dev/null || true
-    iptables -t raw -D OUTPUT -o "\$WAN_IF" -j DROP 2>/dev/null || true
+    # Remove nftables blocks
+    if command -v nft >/dev/null 2>&1; then
+        nft delete table inet ci5_paranoia 2>/dev/null || true
+    fi
     
     # Bring interface back up
     ip link set "\$WAN_IF" up 2>/dev/null || true
@@ -253,15 +260,15 @@ start_service() {
 stop_service() {
     logger -t ci5-paranoia "Stopping paranoia mode watchdog"
     
-    # Clean up iptables rules
+    # Clean up nftables rules
+    if command -v nft >/dev/null 2>&1; then
+        nft delete table inet ci5_paranoia 2>/dev/null || true
+    fi
+    
+    # Ensure WAN is up
     local WAN_IF
     WAN_IF=$(uci -q get network.wan.device 2>/dev/null || uci -q get network.wan.ifname 2>/dev/null || echo "eth1")
     
-    iptables -D FORWARD -o "$WAN_IF" -j DROP 2>/dev/null || true
-    iptables -D OUTPUT -o "$WAN_IF" -j DROP 2>/dev/null || true
-    iptables -t raw -D OUTPUT -o "$WAN_IF" -j DROP 2>/dev/null || true
-    
-    # Ensure WAN is up
     ip link set "$WAN_IF" up 2>/dev/null || true
     ifup wan 2>/dev/null || true
     
@@ -345,9 +352,11 @@ disable_paranoia() {
     # Ensure WAN is restored
     local WAN
     WAN=$(detect_wan)
-    iptables -D FORWARD -o "$WAN" -j DROP 2>/dev/null || true
-    iptables -D OUTPUT -o "$WAN" -j DROP 2>/dev/null || true
-    iptables -t raw -D OUTPUT -o "$WAN" -j DROP 2>/dev/null || true
+    
+    if command -v nft >/dev/null 2>&1; then
+        nft delete table inet ci5_paranoia 2>/dev/null || true
+    fi
+    
     ip link set "$WAN" up 2>/dev/null || true
     ifup wan 2>/dev/null || true
     
@@ -445,8 +454,14 @@ manual_panic() {
     
     ifdown wan 2>/dev/null || true
     ip link set "$WAN" down 2>/dev/null || true
-    iptables -I FORWARD -o "$WAN" -j DROP 2>/dev/null || true
-    iptables -I OUTPUT -o "$WAN" -j DROP 2>/dev/null || true
+    
+    if command -v nft >/dev/null 2>&1; then
+        nft add table inet ci5_paranoia 2>/dev/null || true
+        nft add chain inet ci5_paranoia block_fwd { type filter hook forward priority 0; policy accept; }
+        nft add rule inet ci5_paranoia block_fwd oifname "$WAN" drop
+        nft add chain inet ci5_paranoia block_out { type filter hook output priority 0; policy accept; }
+        nft add rule inet ci5_paranoia block_out oifname "$WAN" drop
+    fi
     
     echo "KILLED" > "$STATE_FILE"
     
@@ -464,9 +479,9 @@ manual_restore() {
     local WAN
     WAN=$(detect_wan)
     
-    iptables -D FORWARD -o "$WAN" -j DROP 2>/dev/null || true
-    iptables -D OUTPUT -o "$WAN" -j DROP 2>/dev/null || true
-    iptables -t raw -D OUTPUT -o "$WAN" -j DROP 2>/dev/null || true
+    if command -v nft >/dev/null 2>&1; then
+        nft delete table inet ci5_paranoia 2>/dev/null || true
+    fi
     
     ip link set "$WAN" up 2>/dev/null || true
     ifup wan 2>/dev/null || true

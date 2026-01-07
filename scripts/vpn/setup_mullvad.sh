@@ -9,6 +9,15 @@
 #   - Kill switch support
 # ══════════════════════════════════════════════════════════════════════════════
 
+# Law 1: BCM2712 Hardware Lock
+if ! grep -q "Raspberry Pi 5" /proc/cpuinfo; then
+    echo "FATAL: CI5 requires BCM2712 (Pi 5) hardware."
+    exit 1
+fi
+
+# Law 5: The Soul Configuration
+[ -f "/root/ci5/ci5.config" ] && . /root/ci5/ci5.config
+
 set -e
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -61,10 +70,10 @@ usage() {
 │  Ci5 Mullvad WireGuard Setup (v7.4-RC-1)                                     │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  USAGE:                                                                      │
+│  USAGE:
 │    mullvad.sh [command] [options]                                            │
 │                                                                              │
-│  COMMANDS:                                                                   │
+│  COMMANDS:
 │    setup         Initial setup with config file(s)                           │
 │    add-server    Add additional failover server config                       │
 │    list-servers  Show all configured servers                                 │
@@ -73,7 +82,7 @@ usage() {
 │    disable       Disable VPN (keep config)                                   │
 │    remove        Remove all Mullvad configuration                            │
 │                                                                              │
-│  SETUP OPTIONS:                                                              │
+│  SETUP OPTIONS:
 │    -c, --config <path>      Primary Mullvad .conf file (required for setup)  │
 │    -a, --add <path>         Add failover server config (can repeat)          │
 │    -v, --vlan <id>          Route only this VLAN through VPN (can repeat)    │
@@ -81,7 +90,7 @@ usage() {
 │    -f, --failover           Enable automatic server failover daemon          │
 │    -i, --interface <name>   WireGuard interface name (default: wg_mullvad)   │
 │                                                                              │
-│  VLAN ROUTING:                                                               │
+│  VLAN ROUTING:
 │    By default, ALL traffic routes through Mullvad.                           │
 │    Use --vlan to selectively route only specific VLANs:                      │
 │                                                                              │
@@ -90,14 +99,14 @@ usage() {
 │    --vlan 30 --vlan 40      Route VLANs 30 & 40, leave 10/20 on WAN          │
 │    --vlan guest             Route 'guest' interface through VPN              │
 │                                                                              │
-│    Ci5 VLAN Scheme (default):                                                │
+│    Ci5 VLAN Scheme (default):
 │      VLAN 10 → 192.168.10.0/24 (e.g., Trusted)                               │
 │      VLAN 20 → 192.168.20.0/24 (e.g., IoT)                                   │
 │      VLAN 30 → 192.168.30.0/24 (e.g., Guest)                                 │
 │      VLAN 40 → 192.168.40.0/24 (e.g., Kids)                                  │
 │      Main LAN → 192.168.99.0/24                                              │
 │                                                                              │
-│  FAILOVER:                                                                   │
+│  FAILOVER:
 │    Add multiple server configs for automatic failover:                       │
 │                                                                              │
 │    mullvad.sh setup -c se-got.conf -a se-sto.conf -a de-fra.conf -f          │
@@ -105,7 +114,7 @@ usage() {
 │    The failover daemon monitors connectivity every 30s and rotates           │
 │    servers after 3 consecutive failures (~90s of downtime).                  │
 │                                                                              │
-│  EXAMPLES:                                                                   │
+│  EXAMPLES:
 │    # Basic setup (all traffic through VPN)                                   │
 │    curl ci5.run/mullvad | sh -s setup -c /tmp/mullvad.conf                   │
 │                                                                              │
@@ -113,7 +122,7 @@ usage() {
 │    curl ci5.run/mullvad | sh -s setup -c /tmp/mullvad.conf -v 20 -v 40       │
 │                                                                              │
 │    # Full setup: 3 servers, VLAN routing, kill switch, failover              │
-│    curl ci5.run/mullvad | sh -s setup -c se-got.conf -a se-sto.conf \        │
+│    curl ci5.run/mullvad | sh -s setup -c se-got.conf -a se-sto.conf \
 │         -a de-fra.conf -v 20 -v 40 -k -f                                     │
 │                                                                              │
 │    # Add another failover server later                                       │
@@ -122,10 +131,10 @@ usage() {
 │    # Manually rotate to next server                                          │
 │    curl ci5.run/mullvad | sh -s rotate                                       │
 │                                                                              │
-│  FIRST TIME SETUP:                                                           │
+│  FIRST TIME SETUP:
 │    1. Log into https://mullvad.net/account/wireguard-config                  │
 │    2. Generate configs for 2-3 servers (different locations for failover)   │
-│    3. Download .conf files to router:                                        │
+│    3. Download .conf files to router:
 │       scp *.conf root@192.168.99.1:/tmp/                                     │
 │    4. Run setup command                                                      │
 │                                                                              │
@@ -379,7 +388,7 @@ configure_vlan_routing() {
     logger -t mullvad-vlan "Setting up VLAN routing through $WG_INTERFACE"
     
     # Add default route to VPN table
-    ip route add default dev $WG_INTERFACE table $WG_TABLE 2>/dev/null || \\
+    ip route add default dev $WG_INTERFACE table $WG_TABLE 2>/dev/null || \
         ip route replace default dev $WG_INTERFACE table $WG_TABLE
     
     # Add fwmark rule
@@ -399,7 +408,7 @@ VLANROUTE
             # Named interface (e.g., "guest", "iot") - try to detect
             local VLAN_IF="br-$VLAN"
             [ ! -e "/sys/class/net/$VLAN_IF" ] && VLAN_IF="$VLAN"
-            VLAN_SUBNET=$(ip addr show "$VLAN_IF" 2>/dev/null | grep -oP 'inet \K[\d.]+/\d+' | head -1)
+            VLAN_SUBNET=$(ip addr show "$VLAN_IF" 2>/dev/null | grep -oP 'inet \K[\d.]+/\[d+' | head -1)
         fi
         
         if [ -n "$VLAN_SUBNET" ]; then
@@ -417,7 +426,7 @@ VLANRULE
     logger -t mullvad-vlan "VLAN routing configured"
 }
 
-[ "$ACTION" = "ifdown" ] && [ "$INTERFACE" = "wg_mullvad" ] && {
+[ "\$ACTION" = "ifdown" ] && [ "\$INTERFACE" = "wg_mullvad" ] && {
     logger -t mullvad-vlan "Cleaning up VLAN routing"
     ip route flush table vpn_mullvad 2>/dev/null || true
     # Note: ip rules persist, but will be no-op without the route
@@ -475,7 +484,7 @@ configure_firewall() {
         log_ok "Created VPN firewall zone"
     else
         # Add interface to existing zone
-        local ZONE_IDX=$(uci show firewall 2>/dev/null | grep "\.name='vpn'" | head -1 | sed "s/.*\[@zone\[\([0-9]*\)\].*/\1/")
+        local ZONE_IDX=$(uci show firewall 2>/dev/null | grep "\.name='vpn'" | head -1 | sed "s/.*\\[@zone\\[\([0-9]*\)\].*/\1/")
         uci add_list firewall.@zone["$ZONE_IDX"].network="$WG_INTERFACE" 2>/dev/null || true
         log_ok "Added to existing VPN zone"
     fi
@@ -531,8 +540,8 @@ KSMSG
         # Block all non-local traffic
         cat >> /etc/hotplug.d/iface/99-mullvad-killswitch << 'KSALL'
     # Block all WAN-bound traffic
-    iptables -I FORWARD -o "$WAN_IF" -j DROP 2>/dev/null || true
-    iptables -I OUTPUT -o "$WAN_IF" ! -d 10.0.0.0/8 ! -d 172.16.0.0/12 ! -d 192.168.0.0/16 -j DROP 2>/dev/null || true
+    iptables -I FORWARD -o "\$WAN_IF" -j DROP 2>/dev/null || true
+    iptables -I OUTPUT -o "\$WAN_IF" ! -d 10.0.0.0/8 ! -d 172.16.0.0/12 ! -d 192.168.0.0/16 -j DROP 2>/dev/null || true
     logger -t mullvad-ks "Kill switch active - ALL WAN traffic blocked"
 }
 KSALL
@@ -557,8 +566,8 @@ KSCLEAN
         done
     else
         cat >> /etc/hotplug.d/iface/99-mullvad-killswitch << 'KSCLEANALL'
-    iptables -D FORWARD -o "$WAN_IF" -j DROP 2>/dev/null || true
-    iptables -D OUTPUT -o "$WAN_IF" ! -d 10.0.0.0/8 ! -d 172.16.0.0/12 ! -d 192.168.0.0/16 -j DROP 2>/dev/null || true
+    iptables -D FORWARD -o "\$WAN_IF" -j DROP 2>/dev/null || true
+    iptables -D OUTPUT -o "\$WAN_IF" ! -d 10.0.0.0/8 ! -d 172.16.0.0/12 ! -d 192.168.0.0/16 -j DROP 2>/dev/null || true
 KSCLEANALL
     fi
     
@@ -828,7 +837,7 @@ show_status() {
     if [ -n "$VLAN_RULES" ]; then
         echo ""
         echo "    VLAN Routing:"
-        echo "$VLAN_RULES" | while read rule; do
+        echo "$VLAN_RULES" | while read rule;
             echo "        $rule"
         done
     fi

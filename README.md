@@ -1,4 +1,4 @@
-###### 📟 [ci5.run](https://github.com/dreamswag/ci5.run): curl ~ 🔬 [ci5.host](https://github.com/dreamswag/ci5.host): cure ~ 🧪 [ci5.dev](https://github.com/dreamswag/ci5.dev): cork ~ 🥼 [ci5.network](https://github.com/dreamswag/ci5.network): cert ~ 📡[ci5](https://github.com/dreamswag/ci5)🛰️
+###### 📟 [ci5.run](https://codeberg.org/Ci-5/run): curl ~ 🔬 [ci5.host](https://codeberg.org/Ci-5/host): cure ~ 🧪 [ci5.dev](https://codeberg.org/Ci-5/dev): cork ~ 🥼 [ci5.network](https://codeberg.org/Ci-5/network): cert ~ 📡[ci5](https://codeberg.org/Ci-5/OS)🛰️
 # 📡 🛸 Raspberry-Ci5: The Net Correctional 💨 🛰️
 | **Model**             | **Price (£)** | **Latency** | **IDS Throughput** |       **Architecture**       | **Freedom?**   |
 | --------------------- | ------------- | :------------------: | :----------------: | :--------------------------: | :------------- |
@@ -42,7 +42,7 @@
 > * **Pi 5 (1/2GB)**: Unsupported - even Lite Stack will likely OOM.
 > * **Pi 4 (Any):** Unsupported - can't achieve documented performance.
 >
-> 📚 **[Full Hardware Compatibility →](https://github.com/dreamswag/ci5.network/blob/main/docs/GOLDEN_HARDWARE.md)**
+> 📚 **[Full Hardware Compatibility →](https://codeberg.org/Ci-5/network/src/branch/main/docs/GOLDEN_HARDWARE.md)**
 
 ---
 
@@ -64,7 +64,7 @@ curl ci5.run/free | sh
 | **Fast Path**  | Bare metal kernel | Routing · NAT · CAKE SQM · BBR · Unbound           | **Still 100% up** → 0 ms latency maintained  |
 | **Smart Path** | Isolated Docker   | Suricata IDS · CrowdSec · Ntopng · Redis · AdGuard | **Still 100% up** → temporarily packet blind |
 
-📚 **[Deep Dive →](https://github.com/dreamswag/ci5.network/blob/main/docs/ARCHITECTURE.md)**
+📚 **[Deep Dive →](https://codeberg.org/Ci-5/network/src/branch/main/docs/ARCHITECTURE.md)**
 
 ---
 
@@ -75,21 +75,21 @@ curl ci5.run/free | sh
 | 1 | Flash Golden Image (or run `curl ci5.run/free \| sh`) |
 | 2 | Connect hardware (USB NIC → WAN, eth0 → AP) |
 | 3 | Run `sh setup.sh` |
-| 4 | Deploy stack (`install-lite.sh` or `install-full.sh`) |
+| 4 | Deploy stack (`scripts/install-minimal.sh` or `scripts/install-recommended.sh`) |
 
-📚 **[5-Minute Quickstart →](https://github.com/dreamswag/ci5.network/blob/main/docs/QUICKSTART.md)**
+📚 **[5-Minute Quickstart →](https://codeberg.org/Ci-5/network/src/branch/main/docs/QUICKSTART.md)**
 
 ---
 
 ## 📚 Documentation
-**Everything is located at [ci5.network/docs](https://github.com/dreamswag/ci5.network/tree/main/docs)**:
+**Everything is located at [ci5.network/docs](https://codeberg.org/Ci-5/network/src/branch/main/docs)**:
 
 | Doc | Purpose |
 |-----|---------|
-| [**QUICKSTART.md**](https://github.com/dreamswag/ci5.network/blob/main/docs/QUICKSTART.md) | 5-minute Setup |
-| [**GOLDEN_HARDWARE.md**](https://github.com/dreamswag/ci5.network/blob/main/docs/GOLDEN_HARDWARE.md) | Hardware Requirements |
-| [**ARCHITECTURE.md**](https://github.com/dreamswag/ci5.network/blob/main/docs/ARCHITECTURE.md) | Technical Deep-Dive |
-| [**MAINTENANCE.md**](https://github.com/dreamswag/ci5.network/blob/main/docs/MAINTENANCE.md) | Updates & Recovery |
+| [**QUICKSTART.md**](https://codeberg.org/Ci-5/network/src/branch/main/docs/QUICKSTART.md) | 5-minute Setup |
+| [**GOLDEN_HARDWARE.md**](https://codeberg.org/Ci-5/network/src/branch/main/docs/GOLDEN_HARDWARE.md) | Hardware Requirements |
+| [**ARCHITECTURE.md**](https://codeberg.org/Ci-5/network/src/branch/main/docs/ARCHITECTURE.md) | Technical Deep-Dive |
+| [**MAINTENANCE.md**](https://codeberg.org/Ci-5/network/src/branch/main/docs/MAINTENANCE.md) | Updates & Recovery |
 
 ---
 > [!TIP]

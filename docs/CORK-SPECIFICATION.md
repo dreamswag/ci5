@@ -32,7 +32,7 @@ my-cork/
     "description": "Brief description of what this cork does",
     "author": "Your Name <email@example.com>",
     "license": "MIT",
-    "homepage": "https://github.com/user/my-cork",
+    "homepage": "https://codeberg.org/user/my-cork",
     
     "ci5": {
         "min_version": "3.0",
@@ -401,4 +401,4 @@ See these reference implementations:
 
 ## Questions?
 
-Open an issue at: https://github.com/ci5/corks/issues
+Open an issue at: https://codeberg.org/Ci-5/dev/issues

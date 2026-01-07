@@ -1,6 +1,21 @@
 version: '3.8'
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  CI5 Docker Compose — Smart Path Containers                               ║
+# ║  Unbound is now native opkg (survives Docker crashes)                     ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+#
+# DNS Architecture:
+#   Primary:  LAN → AdGuard (Docker :53) → Unbound (opkg :5335) → Internet
+#   Failover: LAN → Unbound (opkg :53) → Internet (if AdGuard dies)
+#
+# Usage:
+#   docker compose up -d                    # Core only (AdGuard)
+#   docker compose --profile full up -d     # Full stack (+ Suricata, CrowdSec, ntopng)
+
 services:
-  # --- CORE (Always On) ---
+  # ─────────────────────────────────────────────────────────────────────────────
+  # CORE — Always On
+  # ─────────────────────────────────────────────────────────────────────────────
   adguardhome:
     image: adguard/adguardhome:latest
     container_name: adguardhome
@@ -10,18 +25,12 @@ services:
     volumes:
       - ./adguard/work:/opt/adguardhome/work
       - ./adguard/conf:/opt/adguardhome/conf
+    # AdGuard listens on :53 for DNS, :3000 for Web UI
+    # Upstream configured to 127.0.0.1:5335 (native Unbound)
 
-  unbound:
-    image: mvance/unbound:latest
-    container_name: unbound
-    restart: unless-stopped
-    network_mode: "host"
-    cap_add: [NET_ADMIN]
-    volumes:
-      # Map the symlink target so we can swap configs live
-      - ../configs/unbound:/opt/unbound/etc/unbound/
-
-  # --- FULL (Enabled via --profile full) ---
+  # ─────────────────────────────────────────────────────────────────────────────
+  # FULL PROFILE — Enabled via --profile full
+  # ─────────────────────────────────────────────────────────────────────────────
   redis:
     image: redis:7.2-bookworm
     container_name: redis
@@ -39,7 +48,7 @@ services:
     network_mode: "host"
     depends_on: [redis]
     profiles: ["full"]
-    command: ["--community", "--redis=127.0.0.1:6379", "--interface=eth0"]
+    command: ["--community", "--redis=127.0.0.1:6379", "--interface=br-lan", "-w=3001"]
     volumes:
       - /opt/ci5-docker/config/ntopng:/etc/ntopng
       - /var/lib/ntopng:/var/lib/ntopng
